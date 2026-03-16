@@ -1,0 +1,12 @@
+Flask
+flask-mail
+python-dotenv
+mysql-connector-python
+qrcode
+Pillow
+fpdf
+groq
+gunicorn
+numpy
+opencv-python-headless
+face-recognition

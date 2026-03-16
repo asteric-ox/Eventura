@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Face Data Records{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2 class="text-primary"><i class="fas fa-database me-2"></i>Enrolled Face Records</h2>
+        <p class="text-muted">All registered face data in the system.</p>
+    </div>
+    <div class="col-auto d-flex gap-2 align-items-center">
+        <a href="{{ url_for('face.face_system') }}" class="btn btn-outline-primary">
+            <i class="fas fa-camera me-1"></i>Face System
+        </a>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="card glass-ui shadow-sm border-0">
+    <div class="card-body p-0">
+        {% if face_records %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th class="ps-4">Portrait</th>
+                        <th>Name</th>
+                        <th>ID / Reg No</th>
+                        <th>Role</th>
+                        <th>Enrolled At</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rec in face_records %}
+                    <tr>
+                        <td class="ps-4">
+                            {% if rec.image_path %}
+                            <img src="/{{ rec.image_path }}" class="rounded-circle shadow-sm"
+                                style="width:50px;height:50px;object-fit:cover;"
+                                onerror="this.src='/static/images/default_avatar.png'" alt="Portrait">
+                            {% else %}
+                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                style="width:50px;height:50px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="fw-bold">{{ rec.user_name or 'Unknown' }}</td>
+                        <td><code>{{ rec.user_identifier or '—' }}</code></td>
+                        <td>
+                            <span
+                                class="badge {% if rec.user_role == 'faculty' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                                {{ rec.user_role | capitalize }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">{{ rec.captured_at }}</td>
+                        <td class="text-center">
+                            <a href="{{ url_for('face.delete_face_record', record_id=rec.id) }}"
+                                class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete this face record permanently?')">
+                                <i class="fas fa-trash me-1"></i>Delete
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-user-slash fa-3x opacity-25 mb-3 d-block"></i>
+            <h5>No face records enrolled yet.</h5>
+            <p>Users can enroll their face from the <a href="{{ url_for('face.face_system') }}">Face System</a> page.
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Photo Gallery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --accent: #6c63ff;
+            --dark: #0f0f1a;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a3e 60%, #0d1b2a 100%);
+            min-height: 100vh;
+            color: #e0e0ff;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .navbar-brand {
+            color: var(--accent) !important;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .hero {
+            padding: 80px 0 40px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #6c63ff, #a78bfa, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            color: #9090c0;
+            font-size: 1.15rem;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .filter-btn {
+            background: rgba(108, 99, 255, 0.12);
+            border: 1px solid rgba(108, 99, 255, 0.35);
+            color: #a78bfa;
+            border-radius: 50px;
+            padding: 6px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+        }
+
+        .photo-grid {
+            columns: 3 280px;
+            gap: 16px;
+            padding: 0 16px 60px;
+        }
+
+        .photo-item {
+            break-inside: avoid;
+            margin-bottom: 16px;
+            border-radius: 14px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 4px 24px rgba(108, 99, 255, 0.18);
+            transition: transform 0.25s, box-shadow 0.25s;
+        }
+
+        .photo-item:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 12px 36px rgba(108, 99, 255, 0.35);
+        }
+
+        .photo-item img {
+            width: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        .photo-item .overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(10, 10, 30, 0.92));
+            padding: 20px 14px 12px;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+
+        .photo-item:hover .overlay {
+            opacity: 1;
+        }
+
+        .overlay .title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #fff;
+        }
+
+        .overlay .event-tag {
+            font-size: 0.78rem;
+            color: #a78bfa;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #6060a0;
+        }
+
+        /* Lightbox */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.93);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        #lightbox.open {
+            display: flex;
+        }
+
+        #lightbox img {
+            max-width: 90vw;
+            max-height: 82vh;
+            border-radius: 14px;
+            box-shadow: 0 0 60px rgba(108, 99, 255, 0.5);
+        }
+
+        #lightbox .lb-caption {
+            color: #c0c0ff;
+            margin-top: 14px;
+            font-size: 1rem;
+        }
+
+        #lightbox .lb-close {
+            position: absolute;
+            top: 20px;
+            right: 28px;
+            font-size: 2rem;
+            color: #fff;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+
+        #lightbox .lb-close:hover {
+            opacity: 1;
+        }
+
+        #lightbox .lb-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2.5rem;
+            color: #9090ff;
+            cursor: pointer;
+            padding: 10px 18px;
+            user-select: none;
+        }
+
+        #lightbox .lb-prev {
+            left: 16px;
+        }
+
+        #lightbox .lb-next {
+            right: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .photo-grid {
+                columns: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-dark px-4 py-3"
+        style="background: rgba(10,10,30,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(108,99,255,0.15);">
+        <a class="navbar-brand" href="/"><i class="fas fa-images me-2"></i>Event Gallery</a>
+        <div class="d-flex gap-2">
+            <a href="/" class="btn btn-sm btn-outline-light">Home</a>
+            {% if session.get('is_admin') %}
+            <a href="/admin/event-photos" class="btn btn-sm btn-outline-warning"><i
+                    class="fas fa-upload me-1"></i>Manage Photos</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="hero">
+        <h1><i class="fas fa-camera-retro me-2"></i>Event Gallery</h1>
+        <p>Relive our most memorable campus moments</p>
+    </div>
+
+    <div class="container-fluid">
+        {% if photos %}
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">All Photos <span class="badge bg-secondary ms-1">{{
+                    photos|length }}</span></button>
+            {% for event in events %}
+            {% if photos | selectattr('event_id', 'equalto', event.event_id) | list | length > 0 %}
+            <button class="filter-btn" data-filter="{{ event.event_id }}">
+                {{ event.event_name }}
+                <span class="badge bg-secondary ms-1">{{ photos | selectattr('event_id', 'equalto', event.event_id) |
+                    list | length }}</span>
+            </button>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Photo Grid -->
+        <div class="photo-grid" id="photoGrid">
+            {% for photo in photos %}
+            <div class="photo-item" data-event="{{ photo.event_id or 'none' }}"
+                onclick="openLightbox('{{ photo.filename }}', '{{ photo.title|e }}', '{{ photo.event_name or '' }}')">
+                <img src="/static/uploads/event_photos/{{ photo.filename }}" alt="{{ photo.title }}" loading="lazy">
+                <div class="overlay">
+                    <div class="title">{{ photo.title or 'Untitled' }}</div>
+                    {% if photo.event_name %}
+                    <div class="event-tag"><i class="fas fa-tag me-1"></i>{{ photo.event_name }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-images fa-4x mb-4 opacity-25"></i>
+            <h3>No Photos Yet</h3>
+            <p>Event photos will appear here once they are uploaded.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Lightbox -->
+    <div id="lightbox">
+        <span class="lb-close" onclick="closeLightbox()">&times;</span>
+        <span class="lb-nav lb-prev" onclick="lightboxNav(-1)">&#8249;</span>
+        <img id="lbImg" src="" alt="">
+        <div class="lb-caption" id="lbCaption"></div>
+        <span class="lb-nav lb-next" onclick="lightboxNav(1)">&#8250;</span>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Filter
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const filter = btn.dataset.filter;
+                document.querySelectorAll('.photo-item').forEach(item => {
+                    if (filter === 'all' || item.dataset.event == filter) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        });
+
+        // Lightbox
+        const visiblePhotos = () => Array.from(document.querySelectorAll('.photo-item:not([style*="none"])'));
+        let currentIdx = 0;
+
+        function openLightbox(filename, title, eventName) {
+            const items = visiblePhotos();
+            currentIdx = items.findIndex(el => el.querySelector('img').src.includes(filename));
+            updateLightbox(items[currentIdx]);
+            document.getElementById('lightbox').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function updateLightbox(item) {
+            document.getElementById('lbImg').src = item.querySelector('img').src;
+            const title = item.querySelector('.title')?.textContent || '';
+            const tag = item.querySelector('.event-tag')?.textContent || '';
+            document.getElementById('lbCaption').textContent = [title, tag].filter(Boolean).join(' – ');
+        }
+
+        function lightboxNav(dir) {
+            const items = visiblePhotos();
+            currentIdx = (currentIdx + dir + items.length) % items.length;
+            updateLightbox(items[currentIdx]);
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('lightbox').addEventListener('click', e => {
+            if (e.target === document.getElementById('lightbox')) closeLightbox();
+        });
+        document.addEventListener('keydown', e => {
+            if (document.getElementById('lightbox').classList.contains('open')) {
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') lightboxNav(-1);
+                if (e.key === 'ArrowRight') lightboxNav(1);
+            }
+        });
+    </script>
+</body>
+
+</html>

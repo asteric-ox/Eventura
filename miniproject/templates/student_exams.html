@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Schedule{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2 class="text-primary"><i class="fas fa-file-alt me-2"></i>My Exam Schedule</h2>
+        <p class="text-muted">Stay on top of your upcoming assessments.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Countdown Card -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-lg glass-ui border-primary text-white bg-primary">
+            <div class="card-body text-center p-4">
+                <h5 class="fw-bold text-uppercase"><i class="fas fa-hourglass-half me-2"></i>Next Exam In</h5>
+
+                {% if next_exam %}
+                <div id="exam-countdown" class="display-4 fw-bold mb-3">Calculating...</div>
+                <h6 class="text-white-50 mb-0">
+                    {{ next_exam.course_name }}
+                    <span class="d-block mt-1 badge bg-light text-primary">{{ next_exam.exam_date }} @ {{
+                        next_exam.start_time }}</span>
+                </h6>
+                <script>
+                    (function () {
+                        const examDateStr = "{{ next_exam.exam_date }}T{{ next_exam.start_time }}";
+                        // Ensure proper date format for JS
+                        const examTime = new Date(examDateStr).getTime();
+
+                        const timer = setInterval(function () {
+                            const now = new Date().getTime();
+                            const distance = examTime - now;
+
+                            if (distance < 0) {
+                                clearInterval(timer);
+                                document.getElementById("exam-countdown").innerHTML = "NOW";
+                                return;
+                            }
+
+                            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+
+                            document.getElementById("exam-countdown").innerHTML =
+                                days + "d " + hours + "h " + minutes + "m";
+                        }, 1000);
+                    })();
+                </script>
+                {% else %}
+                <div class="display-4 fw-bold mb-3">--</div>
+                <h6 class="text-white-50">No upcoming exams. Relax!</h6>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline/Table View -->
+    <div class="col-md-8">
+        <div class="card shadow-sm glass-ui">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Date</th>
+                                <th>Subject</th>
+                                <th>Time</th>
+                                <th>Hall</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in exams %}
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">{{ exam.exam_date }}</td>
+                                <td>
+                                    <div class="fw-bold">{{ exam.course_name }}</div>
+                                    <small>{{ exam.department }} - Sem {{ exam.semester }}</small>
+                                </td>
+                                <td><i class="far fa-clock me-1 text-muted"></i> {{ exam.start_time }} - {{
+                                    exam.end_time }}</td>
+                                <td><span class="badge bg-secondary">{{ exam.hall }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">No exams scheduled for your
+                                    semester.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

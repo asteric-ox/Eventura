@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Manage Event Photos{% endblock %}
+{% block content %}
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="text-primary"><i class="fas fa-images me-2"></i>Event Photo Gallery Manager</h2>
+        <p class="text-muted">Upload photos from events. They are publicly visible without any login.</p>
+    </div>
+    <div class="col-md-4 text-end d-flex gap-2 justify-content-end align-items-center">
+        <a href="{{ url_for('event_photos.event_gallery') }}" class="btn btn-outline-info" target="_blank">
+            <i class="fas fa-eye me-1"></i> View Public Gallery
+        </a>
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Upload Card -->
+<div class="card glass-ui shadow-sm mb-5">
+    <div class="card-header bg-transparent border-0">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-upload me-2 text-success"></i>Upload New Photos</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('event_photos.admin_event_photos') }}" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted">Link to Event (Optional)</label>
+                    <select name="event_id" class="form-select">
+                        <option value="">— General / Unlinked —</option>
+                        {% for event in events %}
+                        <option value="{{ event.event_id }}">{{ event.event_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Caption / Title</label>
+                    <input type="text" name="title" class="form-control" placeholder="e.g. Prize Distribution">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100 fw-bold">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>Upload
+                    </button>
+                </div>
+            </div>
+
+            <!-- Drop Zone -->
+            <div id="photoDropZone"
+                class="mt-4 border-2 border-dashed border-success rounded-4 text-center p-5 bg-light bg-opacity-50"
+                style="cursor:pointer; transition: all 0.2s ease;">
+                <i class="fas fa-images fa-3x text-success opacity-50 mb-3"></i>
+                <h5 class="fw-bold">Drag & Drop Photos Here</h5>
+                <p class="text-muted small mb-2">or click to browse — PNG, JPG, GIF, WEBP (max 8MB each)</p>
+                <input type="file" name="photos" id="photoInput" multiple accept="image/*" class="d-none">
+                <button type="button" class="btn btn-outline-success btn-sm mt-2"
+                    onclick="document.getElementById('photoInput').click()">
+                    <i class="fas fa-folder-open me-1"></i>Browse Files
+                </button>
+                <div id="filePreviewContainer" class="row g-2 mt-3 justify-content-center"></div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Existing Photos -->
+<div class="card glass-ui shadow-sm">
+    <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold"><i class="fas fa-photo-film me-2 text-info"></i>All Photos
+            <span class="badge bg-info ms-2">{{ photos|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if photos %}
+        <div class="row g-3">
+            {% for photo in photos %}
+            <div class="col-6 col-md-3 col-lg-2">
+                <div class="card border-0 shadow-sm h-100 overflow-hidden" style="border-radius: 12px;">
+                    <div style="height: 130px; overflow: hidden; cursor:pointer;"
+                        onclick="window.open('/static/uploads/event_photos/{{ photo.filename }}','_blank')">
+                        <img src="/static/uploads/event_photos/{{ photo.filename }}" class="w-100 h-100"
+                            style="object-fit: cover;" alt="{{ photo.title }}" loading="lazy">
+                    </div>
+                    <div class="card-body p-2">
+                        <p class="mb-1 small fw-bold text-truncate" title="{{ photo.title }}">{{ photo.title or
+                            'Untitled' }}</p>
+                        <p class="mb-1 text-muted" style="font-size: 0.72rem;">
+                            {% if photo.event_name %}
+                            <i class="fas fa-tag me-1"></i>{{ photo.event_name }}
+                            {% else %}
+                            <i class="fas fa-globe me-1"></i>General
+                            {% endif %}
+                        </p>
+                        <a href="{{ url_for('event_photos.delete_event_photo', photo_id=photo.photo_id) }}"
+                            class="btn btn-sm btn-outline-danger w-100 mt-1"
+                            onclick="return confirm('Delete this photo permanently?')">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-images fa-3x opacity-25 mb-3 d-block"></i>
+            No photos uploaded yet. Start by uploading the first ones above!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('photoDropZone');
+    const fileInput = document.getElementById('photoInput');
+    const preview = document.getElementById('filePreviewContainer');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); });
+    });
+    ['dragenter', 'dragover'].forEach(ev => {
+        dropZone.addEventListener(ev, () => {
+            dropZone.style.background = 'rgba(25,200,100,0.08)';
+            dropZone.style.borderColor = '#19c864';
+        });
+    });
+    ['dragleave', 'drop'].forEach(ev => {
+        dropZone.addEventListener(ev, () => {
+            dropZone.style.background = '';
+            dropZone.style.borderColor = '';
+        });
+    });
+    dropZone.addEventListener('drop', e => {
+        const dt = new DataTransfer();
+        [...e.dataTransfer.files].forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+        showPreviews(dt.files);
+    });
+    dropZone.addEventListener('click', e => {
+        if (e.target.tagName !== 'BUTTON') fileInput.click();
+    });
+    fileInput.addEventListener('change', () => showPreviews(fileInput.files));
+
+    function showPreviews(files) {
+        preview.innerHTML = '';
+        [...files].forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const col = document.createElement('div');
+                col.className = 'col-auto';
+                col.innerHTML = `<img src="${e.target.result}" style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid #19c864;" title="${file.name}">`;
+                preview.appendChild(col);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+</script>
+{% endblock %}

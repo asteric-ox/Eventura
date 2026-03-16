@@ -1,0 +1,1487 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-white mb-0"><i class="fas fa-graduation-cap me-2"></i>Student Dashboard</h3>
+        <div class="d-flex align-items-center gap-3">
+            <div class="text-white-50">
+                Welcome, <strong>{{ session.get('name', 'Student') }}</strong>
+                {% if session.get('register_number') %}
+                <span class="badge bg-warning text-dark ms-2 shadow-sm rounded-pill"><i
+                        class="fas fa-id-badge me-1"></i>{{ session.get('register_number') }}</span>
+
+                {% if session.get('is_nie23cs') %}
+                <span class="badge fw-bold ms-2 shadow-sm rounded-pill"
+                    style="background: linear-gradient(135deg, #4361ee, #7209b7); font-size: 0.75rem;">
+                    <i class="fas fa-star me-1"></i>NIE Student
+                </span>
+                {% else %}
+                <span class="badge fw-bold ms-2 shadow-sm rounded-pill"
+                    style="background: linear-gradient(135deg, #06b6d4, #0891b2); font-size: 0.75rem;">
+                    <i class="fas fa-globe me-1"></i>Inter-Collegiate
+                </span>
+                {% endif %}
+                {% endif %}
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-user-circle"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end glass-panel border-0 shadow">
+                    <li><a class="dropdown-item text-white" href="#" data-bs-toggle="modal"
+                            data-bs-target="#changePasswordModal"><i class="fas fa-key me-2"></i>Change Password</a>
+                    </li>
+                    <li>
+                        <hr class="dropdown-divider bg-white opacity-25">
+                    </li>
+                    <li><a class="dropdown-item text-white" href="{{ url_for('auth.logout') }}"><i
+                                class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section (Moved to Overview Tab) -->
+
+    <!-- Main Layout Grid with Sidebar -->
+    <div class="row mt-4 mb-5">
+        <!-- Left Sidebar for Navigation -->
+        <div class="col-md-3 mb-4">
+            <div class="card glass-panel border-0 shadow-sm sticky-top" style="top: 20px;">
+                <div class="card-body p-3">
+                    <h5 class="fw-bold text-primary mb-4 ps-2 border-bottom pb-2">Student Portal</h5>
+                    <div class="nav flex-column nav-pills gap-2" id="v-pills-tab" role="tablist"
+                        aria-orientation="vertical">
+                        <button class="nav-link text-start active fw-bold text-white transition-hover bg-transparent"
+                            id="v-pills-overview-tab" data-bs-toggle="pill" data-bs-target="#v-pills-overview"
+                            type="button" role="tab" aria-selected="true">
+                            <i class="fas fa-home me-2"></i> Dashboard Overview
+                        </button>
+                        <button class="nav-link text-start fw-bold text-white transition-hover bg-transparent"
+                            id="v-pills-registrations-tab" data-bs-toggle="pill" data-bs-target="#v-pills-registrations"
+                            type="button" role="tab" aria-selected="false">
+                            <i class="fas fa-list-alt me-2"></i> My Registrations
+                        </button>
+                        <button class="nav-link text-start fw-bold text-white transition-hover bg-transparent"
+                            id="v-pills-academics-tab" data-bs-toggle="pill" data-bs-target="#v-pills-academics"
+                            type="button" role="tab" aria-selected="false">
+                            <i class="fas fa-graduation-cap me-2"></i> Academics
+                        </button>
+                        <button class="nav-link text-start fw-bold text-white transition-hover bg-transparent"
+                            id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile"
+                            type="button" role="tab" aria-selected="false">
+                            <i class="fas fa-id-card me-2"></i> My Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-9">
+            <div class="tab-content" id="v-pills-tabContent">
+
+                <!-- OVERVIEW TAB -->
+                <div class="tab-pane fade show active" id="v-pills-overview" role="tabpanel">
+
+                    <!-- Stats Section (Moved from top) -->
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-3">
+                            <div
+                                class="card glass-panel border-0 shadow-sm h-100 text-white hover-scale transition-hover">
+                                <div class="card-body p-3 p-xl-4 d-flex align-items-center">
+                                    <div class="rounded-circle bg-white bg-opacity-25 p-2 p-xl-3 me-2 me-xl-3">
+                                        <i class="fas fa-clipboard-list fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-uppercase mb-1 small opacity-75" style="font-size: 0.75rem;">
+                                            Registered</h6>
+                                        <h4 class="fw-bold mb-0">{{ total_registered }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div
+                                class="card glass-panel border-0 shadow-sm h-100 text-white hover-scale transition-hover">
+                                <div class="card-body p-3 p-xl-4 d-flex align-items-center">
+                                    <div class="rounded-circle bg-white bg-opacity-25 p-2 p-xl-3 me-2 me-xl-3">
+                                        <i class="fas fa-check-circle fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-uppercase mb-1 small opacity-75" style="font-size: 0.75rem;">
+                                            Attended</h6>
+                                        <h4 class="fw-bold mb-0">{{ attended_count }}</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div
+                                class="card glass-panel border-0 shadow-sm h-100 text-white hover-scale transition-hover">
+                                <div class="card-body p-3 p-xl-4 d-flex align-items-center">
+                                    <div class="rounded-circle bg-white bg-opacity-25 p-2 p-xl-3 me-2 me-xl-3">
+                                        <i class="fas fa-percentage fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-uppercase mb-1 small opacity-75" style="font-size: 0.75rem;">
+                                            Participation</h6>
+                                        <h4 class="fw-bold mb-0">{{ participation_rate }}%</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card glass-panel border-0 shadow-sm h-100 text-white hover-scale transition-hover"
+                                style="background: linear-gradient(135deg, rgba(255,215,0,0.1) 0%, rgba(255,140,0,0.2) 100%); cursor: pointer;"
+                                data-bs-toggle="modal" data-bs-target="#transcriptModal">
+                                <div class="card-body p-3 p-xl-4 d-flex align-items-center">
+                                    <div class="rounded-circle bg-warning text-dark p-2 p-xl-3 me-2 me-xl-3 shadow-sm">
+                                        <i class="fas fa-award fa-lg"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="text-uppercase mb-1 small text-warning fw-bold"
+                                            style="font-size: 0.75rem;">Points: {{ total_campus_points|default(0) }}
+                                        </h6>
+                                        <h5 class="fw-bold mb-0 text-white text-truncate" style="max-width: 100px;"
+                                            title="{{ badge }}">{{ badge }}</h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions Row -->
+                    <div class="row mb-4 g-3">
+                        <div class="col-md-6">
+                            <button
+                                class="card glass-panel border-0 shadow-md h-100 text-white w-100 text-start hover-scale transition-hover bg-transparent"
+                                data-bs-toggle="offcanvas" data-bs-target="#registerEventOffcanvas"
+                                onclick="this.classList.add('animate__animated', 'animate__zoomIn', 'animate__slow'); setTimeout(() => { this.classList.remove('animate__animated', 'animate__zoomIn', 'animate__slow'); }, 2000);">
+                                <div class="card-body p-4 d-flex align-items-center">
+                                    <div
+                                        class="rounded-circle bg-success bg-opacity-25 p-3 me-4 text-success shadow-sm">
+                                        <i class="fas fa-calendar-plus fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Browse Events</h5>
+                                        <small class="opacity-75">Discover and register for new events</small>
+                                    </div>
+                                    <div class="ms-auto text-success opacity-50">
+                                        <i class="fas fa-chevron-right fa-lg"></i>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button
+                                class="card glass-panel border-0 shadow-md h-100 text-white w-100 text-start hover-scale transition-hover bg-transparent"
+                                data-bs-toggle="modal" data-bs-target="#historyModal"
+                                onclick="this.classList.add('animate__animated', 'animate__fadeIn'); setTimeout(() => { this.classList.remove('animate__animated', 'animate__fadeIn'); }, 1000);">
+                                <div class="card-body p-4 d-flex align-items-center">
+                                    <div class="rounded-circle bg-info bg-opacity-25 p-3 me-4 text-info shadow-sm">
+                                        <i class="fas fa-history fa-2x"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-1">Event History</h5>
+                                        <small class="opacity-75">View past events and attendance</small>
+                                    </div>
+                                    <div class="ms-auto text-info opacity-50">
+                                        <i class="fas fa-chevron-right fa-lg"></i>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Calendar Section -->
+                    <div class="card glass-panel border-0 shadow-lg mb-4">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold text-white mb-4"><i
+                                    class="fas fa-calendar-alt me-2 text-warning"></i>Event Schedule</h4>
+                            <div id="calendar" class="w-100 mx-auto" style="max-width: 800px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REGISTRATIONS TAB -->
+                <div class="tab-pane fade" id="v-pills-registrations" role="tabpanel">
+                    <div class="card glass-panel border-0 shadow-lg mb-4">
+                        <div
+                            class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pt-4 px-4 pb-2">
+                            <h4 class="fw-bold text-white mb-0"><i class="fas fa-list-alt me-2 text-info"></i>My
+                                Registrations</h4>
+                        </div>
+                        <div class="card-body p-4 pt-2">
+                            {% if registrations or waitlisted_events %}
+                            <div class="table-responsive">
+                                <table class="table table-hover text-white align-middle data-table">
+                                    <thead class="table-dark bg-transparent">
+                                        <tr>
+                                            <th>Event</th>
+                                            <th>Date</th>
+                                            <th>Location</th>
+                                            <th>Status</th>
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for r in registrations %}
+                                        <tr>
+                                            <td class="fw-bold">{{ r.event_name }}</td>
+                                            <td>{{ r.event_date }}</td>
+                                            <td><small>{{ r.location }}</small></td>
+                                            <td>
+                                                {% if r.attendance == 'Present' %}
+                                                <span class="badge bg-success">Attended</span>
+                                                {% else %}
+                                                <span class="badge bg-warning text-dark">Pending</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex gap-2 align-items-center justify-content-center">
+                                                    {% if r.can_cancel %}
+                                                    <button class="btn btn-sm btn-danger text-white cancel-reg-btn"
+                                                        data-href="{{ url_for('student.cancel_registration', reg_id=r.registration_id) }}"
+                                                        data-event-name="{{ r.event_name }}"
+                                                        title="Cancel Registration">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    {% if r.certificate_status == 'Approved' %}
+                                                    <a href="{{ url_for('student.download_certificate', reg_id=r.registration_id) }}"
+                                                        class="btn btn-sm btn-primary" title="Download Certificate">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                    {% elif r.certificate_status == 'Pending' %}
+                                                    <span class="badge bg-info text-dark"
+                                                        title="Certificate Processing"><i
+                                                            class="fas fa-cog fa-spin"></i></span>
+                                                    {% else %}
+                                                    <span class="text-muted small">-</span>
+                                                    {% endif %}
+
+                                                    {% if r.attendance == 'Present' %}
+                                                    <!-- Feedback -->
+                                                    {% if r.feedback_count > 0 %}
+                                                    <button class="btn btn-sm btn-secondary" disabled
+                                                        title="Already Rated">
+                                                        <i class="fas fa-check"></i>
+                                                    </button>
+                                                    {% else %}
+                                                    <button class="btn btn-sm btn-warning text-dark"
+                                                        data-bs-toggle="modal" data-bs-target="#feedbackModal"
+                                                        data-event-id="{{ r.event_id }}"
+                                                        data-event-name="{{ r.event_name }}" title="Rate Event">
+                                                        <i class="fas fa-star"></i>
+                                                    </button>
+                                                    {% endif %}
+
+                                                    <!-- On-Duty -->
+                                                    {% if r.od_status == 'Approved' %}
+                                                    <span class="badge bg-success" title="On-Duty Approved">OD:
+                                                        Approved</span>
+                                                    {% elif r.od_status == 'Rejected' %}
+                                                    <span class="badge bg-danger" title="On-Duty Rejected">OD:
+                                                        Rejected</span>
+                                                    {% elif r.od_status == 'Pending' %}
+                                                    <span class="badge bg-warning text-dark" title="On-Duty Pending">OD:
+                                                        Pending</span>
+                                                    {% else %}
+                                                    <a href="{{ url_for('student.request_onduty', reg_id=r.registration_id) }}"
+                                                        class="btn btn-sm btn-info text-white load-page"
+                                                        title="Request On-Duty">
+                                                        <i class="fas fa-file-contract"></i> OD
+                                                    </a>
+                                                    {% endif %}
+                                                    {% else %}
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled
+                                                        title="Mark Attendance to Unlock OD">
+                                                        <i class="fas fa-lock"></i> OD
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+
+                                        {% for w in waitlisted_events %}
+                                        <tr>
+                                            <td class="fw-bold">{{ w.event_name }}</td>
+                                            <td>{{ w.event_date }}</td>
+                                            <td><small>{{ w.location }}</small></td>
+                                            <td>
+                                                <span class="badge bg-warning text-dark px-3 mt-1 shadow-sm">
+                                                    Waitlist #{{ w.position }}
+                                                </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex gap-2 align-items-center justify-content-center">
+                                                    <button class="btn btn-sm btn-danger text-white cancel-waitlist-btn"
+                                                        data-href="{{ url_for('student.cancel_waitlist', waitlist_id=w.waitlist_id) }}"
+                                                        data-event-name="{{ w.event_name }}" title="Cancel Waitlist">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    <span class="text-muted small">-</span>
+                                                    <button class="btn btn-sm btn-outline-secondary" disabled
+                                                        title="Must be registered">
+                                                        <i class="fas fa-lock"></i> OD
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-calendar-times fa-3x mb-3 opacity-50"></i>
+                                <p>No active registrations found.</p>
+                                <button class="btn btn-primary mt-2" type="button" data-bs-toggle="offcanvas"
+                                    data-bs-target="#registerEventOffcanvas">
+                                    Browse Events
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- ACADEMICS TAB -->
+                <div class="tab-pane fade" id="v-pills-academics" role="tabpanel">
+                    <div class="card glass-panel border-0 shadow-lg mb-4">
+                        <div class="card-body p-4 p-md-5">
+                            <div class="text-center mb-5">
+                                <div class="rounded-circle bg-primary bg-opacity-25 d-inline-flex p-3 mb-3">
+                                    <i class="fas fa-graduation-cap fa-2x text-primary shadow-sm"></i>
+                                </div>
+                                <h4 class="fw-bold text-white">Academic Resources</h4>
+                                <p class="text-white-50">Access your personalized schedules and academic tracking tools.
+                                </p>
+                            </div>
+
+                            <div class="row g-4 justify-content-center">
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('student.student_timetable') }}"
+                                        class="text-decoration-none load-page">
+                                        <div
+                                            class="card glass-panel border-0 shadow-sm h-100 text-white hover-scale transition-hover bg-transparent">
+                                            <div class="card-body p-4 d-flex align-items-center">
+                                                <div
+                                                    class="rounded-circle bg-primary bg-opacity-25 p-3 me-4 text-primary shadow-sm">
+                                                    <i class="fas fa-calendar-alt fa-2x"></i>
+                                                </div>
+                                                <div>
+                                                    <h5 class="fw-bold mb-1">My Timetable</h5>
+                                                    <small class="opacity-75">View weekly class schedule</small>
+                                                </div>
+                                                <div class="ms-auto text-primary opacity-50">
+                                                    <i class="fas fa-chevron-right fa-lg"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="{{ url_for('student.student_exams') }}"
+                                        class="text-decoration-none load-page">
+                                        <div
+                                            class="card glass-panel border-0 shadow-sm h-100 text-white hover-scale transition-hover bg-transparent">
+                                            <div class="card-body p-4 d-flex align-items-center">
+                                                <div
+                                                    class="rounded-circle bg-warning bg-opacity-25 p-3 me-4 text-warning shadow-sm">
+                                                    <i class="fas fa-file-alt fa-2x"></i>
+                                                </div>
+                                                <div>
+                                                    <h5 class="fw-bold mb-1">Exam Schedule</h5>
+                                                    <small class="opacity-75">Check upcoming examinations</small>
+                                                </div>
+                                                <div class="ms-auto text-warning opacity-50">
+                                                    <i class="fas fa-chevron-right fa-lg"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FACE RECOGNITION TAB -->
+                <div class="tab-pane fade" id="v-pills-face" role="tabpanel">
+                    <div class="card glass-panel border-0 shadow-lg mb-4">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+                            <h4 class="fw-bold text-white mb-0">
+                                <i class="fas fa-user-circle me-2" style="color:#a78bfa;"></i>Face Recognition
+                            </h4>
+                            <p class="text-white-50 small mb-0">Enroll your face once, then verify your identity
+                                instantly.
+                            </p>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Mode Buttons -->
+                            <div class="d-flex gap-2 mb-4">
+                                <button class="btn btn-primary fw-bold px-4" id="sdEnrollBtn"
+                                    onclick="sdSetMode('enroll')">
+                                    <i class="fas fa-user-plus me-2"></i>Enroll My Face
+                                </button>
+                                <button class="btn btn-outline-info fw-bold px-4" id="sdRecogBtn"
+                                    onclick="sdSetMode('recognize')">
+                                    <i class="fas fa-search me-2"></i>Recognize
+                                </button>
+                            </div>
+
+                            <div class="row g-4">
+                                <!-- Camera -->
+                                <div class="col-md-7">
+                                    <div class="rounded-4 overflow-hidden shadow position-relative"
+                                        style="background:#000;">
+                                        <video id="sdVideo" autoplay playsinline
+                                            style="width:100%; max-height:360px; object-fit:cover; display:block;"></video>
+                                        <!-- Oval guide -->
+                                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+                                        width:160px;height:210px;border:3px solid rgba(108,200,255,0.7);
+                                        border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,0.35);
+                                        pointer-events:none;"></div>
+                                        <div class="text-center py-2" id="sdCamStatus">
+                                            <small class="text-white-50"><i
+                                                    class="fas fa-spinner fa-spin me-1"></i>Starting
+                                                camera...</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-grid mt-3">
+                                        <button class="btn btn-success btn-lg fw-bold shadow" id="sdCaptureBtn"
+                                            onclick="sdCapture()">
+                                            <i class="fas fa-camera me-2"></i><span id="sdCaptureLbl">Enroll Face</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-center text-white-50 small mt-2">Tip: Press <kbd>Space</kbd> to
+                                        capture
+                                        quickly</p>
+                                </div>
+
+                                <!-- Result -->
+                                <div class="col-md-5">
+                                    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px; min-height:180px;
+                                     background: rgba(255,255,255,0.05);" id="sdResultPanel">
+                                        <div class="card-body text-center py-4 text-white">
+                                            <i class="fas fa-user-circle fa-4x opacity-25 mb-3"></i>
+                                            <p class="text-white-50">Capture a frame to see results.</p>
+                                        </div>
+                                    </div>
+                                    <!-- Portrait preview -->
+                                    <div id="sdPortraitCard" class="card border-0 shadow-sm text-center p-3"
+                                        style="border-radius:14px; background:rgba(255,255,255,0.05); display:none;">
+                                        <p class="text-white-50 small mb-2"><i class="fas fa-id-badge me-1"></i>Saved
+                                            Portrait</p>
+                                        <div id="sdPortraitBody"></div>
+                                    </div>
+                                    <!-- Tips -->
+                                    <div class="mt-3 p-3 rounded-3" style="background:rgba(255,255,255,0.05);">
+                                        <p class="text-white-50 small mb-1 fw-bold"><i
+                                                class="fas fa-lightbulb me-1 text-warning"></i>Tips</p>
+                                        <ul class="text-white-50 small mb-0 ps-3">
+                                            <li>Look directly at camera</li>
+                                            <li>Good lighting on face</li>
+                                            <li>No sunglasses / masks</li>
+                                            <li>Enroll first, then Recognize</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PROFILE TAB -->
+                <div class="tab-pane fade" id="v-pills-profile" role="tabpanel">
+                    <div class="card glass-panel border-0 shadow-lg mb-4">
+                        <div class="card-header bg-transparent border-0 pt-4 px-4 pb-2">
+                            <h4 class="fw-bold text-white mb-0">
+                                <i class="fas fa-id-card me-2 text-info"></i>My Profile
+                            </h4>
+                            <p class="text-white-50 small mb-0">Keep your details up to date for events and attendance.
+                            </p>
+                        </div>
+                        <div class="card-body p-4">
+                            <form method="POST" action="{{ url_for('student.update_profile') }}"
+                                enctype="multipart/form-data">
+                                <!-- Photo Upload -->
+                                <div class="text-center mb-4">
+                                    <div class="position-relative d-inline-block">
+                                        {% if student_profile and student_profile.profile_photo %}
+                                        <img src="/static/uploads/portraits/{{ student_profile.profile_photo }}"
+                                            class="rounded-circle shadow" id="previewAvatar"
+                                            style="width:110px;height:110px;object-fit:cover;border:3px solid rgba(108,99,255,0.6);">
+                                        {% else %}
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white shadow"
+                                            id="previewAvatar"
+                                            style="width:110px;height:110px;font-size:2.5rem;background:linear-gradient(135deg,#4361ee,#7209b7);border:3px solid rgba(108,99,255,0.6);">
+                                            {{ session.get('name','?')[0].upper() }}
+                                        </div>
+                                        {% endif %}
+                                        <label for="photoInput"
+                                            class="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle shadow"
+                                            style="width:34px;height:34px;padding:0;line-height:34px;cursor:pointer;">
+                                            <i class="fas fa-camera"></i>
+                                            <input type="file" id="photoInput" name="profile_photo" accept="image/*"
+                                                class="d-none" onchange="previewPhoto(this)">
+                                        </label>
+                                    </div>
+                                    <p class="text-white-50 small mt-2">Click the camera icon to upload a photo</p>
+                                </div>
+
+                                <!-- Read-only fields -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-white-50 small fw-bold">Full Name</label>
+                                        <input type="text" class="form-control glass-input text-white"
+                                            value="{{ session.get('name','') }}" readonly>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-white-50 small fw-bold">Register Number</label>
+                                        <input type="text" class="form-control glass-input text-white"
+                                            value="{{ session.get('register_number','') }}" readonly>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-white-50 small fw-bold">Email</label>
+                                        <input type="email" class="form-control glass-input text-white"
+                                            value="{{ session.get('email','') }}" readonly>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-white-50 small fw-bold">Phone Number</label>
+                                        <input type="tel" name="phone" class="form-control glass-input text-white"
+                                            placeholder="Enter phone number"
+                                            value="{{ student_profile.phone if student_profile and student_profile.phone else '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-white-50 small fw-bold">Year</label>
+                                        <select name="year" class="form-select glass-input text-white">
+                                            <option value="">Select Year</option>
+                                            {% for y in range(1,5) %}
+                                            <option value="{{ y }}" {% if student_profile and student_profile.year==y
+                                                %}selected{% endif %}>Year {{ y }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-white-50 small fw-bold">Department</label>
+                                        <input type="text" name="department" class="form-control glass-input text-white"
+                                            placeholder="e.g. Computer Science"
+                                            value="{{ student_profile.department if student_profile and student_profile.department else '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label text-white-50 small fw-bold">Semester</label>
+                                        <select name="semester" class="form-select glass-input text-white">
+                                            <option value="">Select Semester</option>
+                                            {% for s in range(1,9) %}
+                                            <option value="{{ s }}" {% if student_profile and
+                                                student_profile.semester|string==s|string %}selected{% endif %}>Semester
+                                                {{
+                                                s }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid mt-2">
+                                    <button type="submit" class="btn btn-primary fw-bold py-2">
+                                        <i class="fas fa-save me-2"></i>Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- /.tab-content -->
+        </div> <!-- /.col-md-9 -->
+    </div> <!-- /.row -->
+</div>
+
+<!-- FullCalendar CSS and JS -->
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+
+<style>
+    /* FullCalendar Customization */
+    .fc {
+        color: var(--bs-body-color);
+        --fc-border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    [data-bs-theme="dark"] .fc {
+        --fc-border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .fc-event {
+        cursor: pointer;
+        padding: 4px 8px;
+        font-weight: 500;
+        background: #4361ee !important;
+        border: none !important;
+        border-radius: 6px !important;
+    }
+
+    .fc-toolbar-title {
+        font-weight: bold;
+    }
+
+    .fc-col-header-cell-cushion,
+    .fc-daygrid-day-number {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
+
+    .fc-button-primary {
+        background-color: #4361ee !important;
+        border: none !important;
+    }
+
+    /* Modal Backdrop Blur */
+    .modal.fade.show {
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.4);
+    }
+</style>
+
+<!-- Event Data for Calendar -->
+<script id="calendar-events-data" type="application/json">
+    [
+        {% for event in events %}
+        {
+            "id": "{{ event.event_id }}",
+            "title": {{ event.event_name|tojson }},
+            "start": "{{ event.event_date }}",
+            "extendedProps": {
+                "description": {{ event.description|tojson }},
+                "location": {{ event.location|tojson }},
+                "is_registered": {{ 'true' if event.is_registered else 'false' }},
+                "is_waitlisted": {{ 'true' if event.is_waitlisted else 'false' }},
+                "waitlist_pos": {{ event.waitlist_pos if event.waitlist_pos is not none else 'null' }}
+            }
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ]
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var calendarEl = document.getElementById('calendar');
+        var eventsData = JSON.parse(document.getElementById('calendar-events-data').textContent);
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            fixedWeekCount: false,
+            contentHeight: 450,
+            events: eventsData,
+            eventClick: function (info) {
+                const event = info.event;
+                const props = event.extendedProps;
+
+                // Populate Detail Modal
+                document.getElementById('detailModalTitle').textContent = event.title;
+                document.getElementById('detailModalDate').textContent = event.start.toLocaleDateString();
+                document.getElementById('detailModalLocation').textContent = props.location;
+                document.getElementById('detailModalDescription').textContent = props.description;
+
+                // Show/Hide Register Button based on registration status
+                const regBtn = document.getElementById('calendarRegisterBtn');
+                if (props.is_registered) {
+                    regBtn.classList.add('d-none');
+                    document.getElementById('alreadyRegisteredNote').classList.remove('d-none');
+                    document.getElementById('alreadyWaitlistedNote').classList.add('d-none');
+                } else if (props.is_waitlisted) {
+                    regBtn.classList.add('d-none');
+                    document.getElementById('alreadyRegisteredNote').classList.add('d-none');
+                    let waitlistNote = document.getElementById('alreadyWaitlistedNote');
+                    waitlistNote.innerHTML = '<i class="fas fa-clock me-1"></i> Waitlisted (Queue Pos: ' + (props.waitlist_pos ? props.waitlist_pos : '?') + ')';
+                    waitlistNote.classList.remove('d-none');
+                } else {
+                    regBtn.classList.remove('d-none');
+                    document.getElementById('alreadyRegisteredNote').classList.add('d-none');
+                    document.getElementById('alreadyWaitlistedNote').classList.add('d-none');
+                    // Setup register button to open the existing registration modal
+                    regBtn.onclick = () => {
+                        const registerModal = new bootstrap.Modal(document.getElementById('eventRegisterModal'));
+                        // Setup the registration modal data
+                        document.getElementById('modalEventName').textContent = event.title;
+                        document.getElementById('registrationForm').action = `/register-event/${event.id}`;
+
+                        bootstrap.Modal.getInstance(document.getElementById('calendarEventDetailModal')).hide();
+                        registerModal.show();
+                    };
+                }
+
+                var detailModal = new bootstrap.Modal(document.getElementById('calendarEventDetailModal'));
+                detailModal.show();
+            }
+        });
+        calendar.render();
+    });
+</script>
+
+<script>
+    // Profile photo live preview
+    function previewPhoto(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const el = document.getElementById('previewAvatar');
+                if (el.tagName === 'IMG') {
+                    el.src = e.target.result;
+                } else {
+                    // Replace the div with an img
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.id = 'previewAvatar';
+                    img.className = 'rounded-circle shadow';
+                    img.style.cssText = 'width:110px;height:110px;object-fit:cover;border:3px solid rgba(108,99,255,0.6);';
+                    el.parentNode.replaceChild(img, el);
+                }
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+</script>
+
+<!-- Calendar Event Detail Modal -->
+<div class="modal fade" id="calendarEventDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="detailModalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong><i class="fas fa-calendar-alt me-2"></i>Date:</strong> <span id="detailModalDate"></span></p>
+                <p><strong><i class="fas fa-map-marker-alt me-2"></i>Location:</strong> <span
+                        id="detailModalLocation"></span></p>
+                <p><strong><i class="fas fa-info-circle me-2"></i>Description:</strong></p>
+                <p id="detailModalDescription" class="text-muted"></p>
+
+                <div class="d-grid mt-4">
+                    <button id="calendarRegisterBtn" class="btn btn-primary">Register Now</button>
+                    <p id="alreadyRegisteredNote" class="text-success text-center d-none fw-bold"><i
+                            class="fas fa-check-circle me-1"></i> You are registered!</p>
+                    <p id="alreadyWaitlistedNote" class="text-warning text-center d-none fw-bold"><i
+                            class="fas fa-clock me-1"></i> You are on the waitlist!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Register Event Offcanvas (Bottom) -->
+<div class="offcanvas offcanvas-bottom h-100 glass-ui offcanvas-slow" tabindex="-1" id="registerEventOffcanvas"
+    aria-labelledby="registerEventOffcanvasLabel">
+    <div class="offcanvas-header border-bottom-0">
+        <h5 class="offcanvas-title fw-bold" id="registerEventOffcanvasLabel"><i
+                class="fas fa-calendar-alt me-2 text-primary"></i>Available
+            Events</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="container">
+            <div class="row">
+                {% if events %}
+                {% for event in events %}
+                <div class="col-md-6 mb-3">
+                    <div class="card glass-ui border-0 shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ event.event_name }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ event.event_date }} | {{ event.location }}</h6>
+                            <p class="card-text">{{ event.description }}</p>
+
+                            {% if event.is_registered %}
+                            <button class="btn btn-secondary w-100" disabled>Already Registered</button>
+                            {% elif event.is_waitlisted %}
+                            <button class="btn btn-warning w-100 text-dark" disabled><i
+                                    class="fas fa-clock me-2"></i>Waitlist Queue: #{{ event.waitlist_pos }}</button>
+                            {% else %}
+                            <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal"
+                                data-bs-target="#eventRegisterModal" data-event-id="{{ event.event_id }}"
+                                data-event-name="{{ event.event_name }}"
+                                data-require-face="{{ event.require_face_photo|default(0) }}">
+                                <i class="fas fa-user-circle me-1"></i> Register Now
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="col-12 text-center">
+                    <p class="text-muted">No upcoming events available for registration.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event History Modal -->
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-ui">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold"><i class="fas fa-history me-2 text-primary"></i>Participation History
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">You have participated in <span class="fw-bold text-success">{{ attended_count
+                        }}</span> events in the past.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Event Name</th>
+                                <th>Date</th>
+                                <th>Location</th>
+                                <th>Attendance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in registrations %}
+                            <tr>
+                                <td>{{ r.event_name }}</td>
+                                <td>{{ r.event_date }}</td>
+                                <td>{{ r.location }}</td>
+                                <td>
+                                    {% if r.attendance == 'Present' %}
+                                    <span class="badge bg-success">Attended</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">Not Marked</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            {% if not registrations %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No history found.</td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Event Registration Modal (2-step: Face Capture → Form) -->
+<div class="modal fade" id="eventRegisterModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-ui">
+            <div class="modal-header border-0">
+                <div>
+                    <h5 class="modal-title mb-0">Register for <span id="modalEventName" class="text-primary"></span>
+                    </h5>
+                    <small id="regStepLabel" class="text-white-50"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- STEP 1: Face Capture -->
+                <div id="faceStep" class="d-none">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle d-inline-flex p-2 mb-2" style="background:rgba(108,99,255,0.2);">
+                            <i class="fas fa-user-circle fa-2x" style="color:#a78bfa;"></i>
+                        </div>
+                        <h6 class="fw-bold text-white">Face Verification Required</h6>
+                        <p class="text-white-50 small">This event requires a selfie for attendance. Look directly at the
+                            camera and click Capture.</p>
+                    </div>
+                    <div class="position-relative rounded-3 overflow-hidden mb-3"
+                        style="background:#000;max-height:300px;">
+                        <video id="regVideo" autoplay playsinline
+                            style="width:100%;max-height:300px;object-fit:cover;display:block;"></video>
+                        <div
+                            style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:140px;height:185px;border:2.5px solid rgba(108,200,255,0.7);border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,0.35);pointer-events:none;">
+                        </div>
+                    </div>
+                    <canvas id="regCanvas" class="d-none"></canvas>
+                    <div id="capturePreview" class="d-none text-center mb-3">
+                        <img id="capturedImg" src="" class="rounded-3 shadow"
+                            style="max-width:180px;border:2px solid rgba(108,99,255,0.5);">
+                        <p class="text-success small mt-2"><i class="fas fa-check-circle me-1"></i>Photo captured!
+                            Proceed to register.</p>
+                    </div>
+                    <input type="hidden" id="capturedFaceData" name="face_photo">
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary flex-fill fw-bold" id="captureBtn"
+                            onclick="regCapture()">
+                            <i class="fas fa-camera me-2"></i>Capture Photo
+                        </button>
+                        <button type="button" class="btn btn-success flex-fill fw-bold d-none" id="proceedBtn"
+                            onclick="regProceed()">
+                            <i class="fas fa-arrow-right me-2"></i>Proceed to Register
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Registration Form -->
+                <div id="formStep">
+                    <form id="registrationForm" method="POST" action="">
+                        <input type="hidden" name="face_photo" id="formFacePhoto">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ session.get('name', '') }}"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Register Number</label>
+                            <input type="text" name="register_number" class="form-control"
+                                value="{{ session.get('register_number', '') }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ session.get('email', '') }}"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Semester</label>
+                            <select name="semester" class="form-select" required>
+                                <option value="" {% if not session.get('semester') %}selected{% endif %} disabled>Select
+                                    Semester</option>
+                                {% for i in range(1, 9) %}
+                                <option value="{{ i }}" {% if session.get('semester')|string==i|string %}selected{%
+                                    endif %}>
+                                    {{ i }}{% if i == 1 %}st{% elif i == 2 %}nd{% elif i == 3 %}rd{% else %}th{% endif
+                                    %} Semester
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary fw-bold">Confirm Registration</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Rate Event: <span id="feedbackEventName" class="text-primary"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="feedbackForm" method="POST" action="/submit-feedback">
+                    <input type="hidden" name="event_id" id="feedbackEventId">
+
+                    <div class="mb-4 text-center">
+                        <label class="form-label d-block fw-bold mb-2">How was your experience?</label>
+                        <div class="d-flex justify-content-center gap-2">
+                            <input type="radio" class="btn-check" name="rating" id="rating5" value="5" checked>
+                            <label class="btn btn-outline-warning" for="rating5">5 <i class="fas fa-star"></i></label>
+
+                            <input type="radio" class="btn-check" name="rating" id="rating4" value="4">
+                            <label class="btn btn-outline-warning" for="rating4">4 <i class="fas fa-star"></i></label>
+
+                            <input type="radio" class="btn-check" name="rating" id="rating3" value="3">
+                            <label class="btn btn-outline-warning" for="rating3">3 <i class="fas fa-star"></i></label>
+
+                            <input type="radio" class="btn-check" name="rating" id="rating2" value="2">
+                            <label class="btn btn-outline-warning" for="rating2">2 <i class="fas fa-star"></i></label>
+
+                            <input type="radio" class="btn-check" name="rating" id="rating1" value="1">
+                            <label class="btn btn-outline-warning" for="rating1">1 <i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Comments</label>
+                        <textarea name="comments" class="form-control" rows="3"
+                            placeholder="Share your thoughts about the event..." required></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Registration Modal -->
+<div class="modal fade" id="cancelRegistrationModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui text-center p-4 border-0">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <i class="fas fa-exclamation-circle fa-5x text-danger"></i>
+                </div>
+                <h4 class="mt-3 fw-bold text-danger">Cancel Registration?</h4>
+                <p class="mb-4 text-muted">Are you sure you want to cancel your registration for <strong
+                        id="cancelEventName"></strong>?</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep It</button>
+                    <a id="confirmCancelBtn" href="#" class="btn btn-danger">Yes, Cancel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-white"><i class="fas fa-key me-2 text-warning"></i>Change Password
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('auth.change_password') }}">
+                    <div class="mb-3">
+                        <label class="form-label text-white-50 small fw-bold">Current Password</label>
+                        <input type="password" name="current_password" class="form-control glass-input text-white"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white-50 small fw-bold">New Password</label>
+                        <input type="password" name="new_password" class="form-control glass-input text-white" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white-50 small fw-bold">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control glass-input text-white"
+                            required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning fw-bold">Update Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Co-curricular Transcript Modal -->
+<div class="modal fade" id="transcriptModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-ui">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-warning"><i class="fas fa-award me-2"></i> Co-curricular Transcript
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="fw-bold mb-0 text-white">Current Rank: <span class="text-warning">{{ badge }}</span>
+                        </h4>
+                        <p class="text-white-50 form-text mb-0">Total Campus Points: {{ total_campus_points|default(0)
+                            }}</p>
+                    </div>
+                    <i class="fas fa-trophy fa-3x text-warning opacity-75"></i>
+                </div>
+
+                <h6 class="text-white fw-bold mb-3 border-bottom border-light pb-2">Points History</h6>
+                {% set ns = namespace(found=false) %}
+                <ul class="list-group list-group-flush bg-transparent">
+                    {% for r in registrations %}
+                    {% if r.attendance == 'Present' and r.points_awarded %}
+                    {% set ns.found = true %}
+                    <li
+                        class="list-group-item bg-transparent text-white border-bottom border-light d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <h6 class="mb-0 fw-bold">{{ r.event_name }}</h6>
+                            <small class="text-white-50"><i class="fas fa-tag me-1 text-info"></i>{{ r.event_type }}
+                                &nbsp; | &nbsp; <i class="far fa-calendar-alt text-muted ms-1"></i> {{ r.event_date
+                                }}</small>
+                        </div>
+                        <span class="badge bg-warning text-dark rounded-pill fs-6">+{{ r.points_awarded }} pts</span>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if not ns.found %}
+                    <li class="list-group-item bg-transparent text-white-50 border-0 px-0 text-center py-4">
+                        <i class="fas fa-info-circle fa-2x mb-2 opacity-50"></i><br>
+                        Attend events to start earning Campus Points!
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Apply Dashboard Background
+        document.body.classList.add('student-dashboard-bg');
+
+        // Register Event Modal Logic (2-step: Face → Form)
+        let _regStream = null;
+        let _requireFace = false;
+
+        const registerModal = document.getElementById('eventRegisterModal');
+        if (registerModal) {
+            registerModal.addEventListener('show.bs.modal', ev => {
+                const btn = ev.relatedTarget;
+                const eventId = btn.getAttribute('data-event-id');
+                const eventName = btn.getAttribute('data-event-name');
+                _requireFace = btn.getAttribute('data-require-face') === '1';
+
+                const modalTitle = document.getElementById('modalEventName');
+                if (modalTitle) modalTitle.textContent = eventName;
+                const form = document.getElementById('registrationForm');
+                if (form) form.action = `/register-event/${eventId}`;
+
+                // Reset steps
+                const faceStep = document.getElementById('faceStep');
+                const formStep = document.getElementById('formStep');
+                const capturePreview = document.getElementById('capturePreview');
+                const captureBtn = document.getElementById('captureBtn');
+                const proceedBtn = document.getElementById('proceedBtn');
+                const stepLabel = document.getElementById('regStepLabel');
+                const formFacePhoto = document.getElementById('formFacePhoto');
+
+                if (faceStep) faceStep.classList.add('d-none');
+                if (formStep) formStep.classList.remove('d-none');
+                if (capturePreview) capturePreview.classList.add('d-none');
+                if (captureBtn) { captureBtn.classList.remove('d-none'); captureBtn.innerHTML = '<i class="fas fa-camera me-2"></i>Capture Photo'; }
+                if (proceedBtn) proceedBtn.classList.add('d-none');
+                if (formFacePhoto) formFacePhoto.value = '';
+                if (stepLabel) stepLabel.textContent = '';
+
+                if (_requireFace) {
+                    if (faceStep) faceStep.classList.remove('d-none');
+                    if (formStep) formStep.classList.add('d-none');
+                    if (stepLabel) stepLabel.textContent = 'Step 1 of 2 — Face Verification';
+                    // Start camera
+                    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+                        .then(stream => { _regStream = stream; const v = document.getElementById('regVideo'); if (v) v.srcObject = stream; })
+                        .catch(() => alert('Camera access denied. Please allow camera to continue.'));
+                }
+            });
+
+            registerModal.addEventListener('hide.bs.modal', () => {
+                if (_regStream) { _regStream.getTracks().forEach(t => t.stop()); _regStream = null; }
+            });
+        }
+
+        // Global helpers (called by onclick in the modal)
+        window.regCapture = function () {
+            const video = document.getElementById('regVideo');
+            const canvas = document.getElementById('regCanvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const img = document.getElementById('capturedImg');
+            if (img) img.src = dataUrl;
+            const prev = document.getElementById('capturePreview');
+            if (prev) prev.classList.remove('d-none');
+            const cb = document.getElementById('captureBtn');
+            if (cb) cb.innerHTML = '<i class="fas fa-redo me-2"></i>Retake';
+            const pb = document.getElementById('proceedBtn');
+            if (pb) pb.classList.remove('d-none');
+        };
+
+        window.regProceed = function () {
+            const dataUrl = document.getElementById('capturedImg').src;
+            const fp = document.getElementById('formFacePhoto');
+            if (fp) fp.value = dataUrl;
+            if (_regStream) { _regStream.getTracks().forEach(t => t.stop()); _regStream = null; }
+            const faceStep = document.getElementById('faceStep');
+            const formStep = document.getElementById('formStep');
+            if (faceStep) faceStep.classList.add('d-none');
+            if (formStep) formStep.classList.remove('d-none');
+            const stepLabel = document.getElementById('regStepLabel');
+            if (stepLabel) stepLabel.textContent = 'Step 2 of 2 — Fill Details';
+        };
+
+
+        // Feedback Modal Logic
+        const feedbackModal = document.getElementById('feedbackModal');
+        if (feedbackModal) {
+            feedbackModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const eventId = button.getAttribute('data-event-id');
+                const eventName = button.getAttribute('data-event-name');
+
+                const modalTitle = document.getElementById('feedbackEventName');
+                if (modalTitle) modalTitle.textContent = eventName;
+
+                const inputId = document.getElementById('feedbackEventId');
+                if (inputId) inputId.value = eventId;
+            });
+        }
+
+        // Cancel Registration Modal Logic
+        const cancelBtns = document.querySelectorAll('.cancel-reg-btn');
+        cancelBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const href = this.getAttribute('data-href');
+                const name = this.getAttribute('data-event-name');
+                const confirmBtn = document.getElementById('confirmCancelBtn');
+                const nameSpan = document.getElementById('cancelEventName');
+
+                if (confirmBtn) confirmBtn.href = href;
+                if (nameSpan) nameSpan.textContent = name;
+
+                const modalEl = document.getElementById('cancelRegistrationModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
+            });
+        });
+        // Cancel Waitlist Modal Logic
+        const cancelWaitlistBtns = document.querySelectorAll('.cancel-waitlist-btn');
+        cancelWaitlistBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const href = this.getAttribute('data-href');
+                const name = this.getAttribute('data-event-name');
+                const confirmBtn = document.getElementById('confirmCancelBtn');
+                const nameSpan = document.getElementById('cancelEventName');
+
+                if (confirmBtn) confirmBtn.href = href;
+                if (nameSpan) nameSpan.textContent = name;
+
+                const modalEl = document.getElementById('cancelRegistrationModal');
+                if (modalEl) {
+                    new bootstrap.Modal(modalEl).show();
+                }
+            });
+        });
+    });
+</script>
+<!-- Floating Chat Widget -->
+<div id="chatbot-container" class="chatbot-closed animate__animated">
+    <div class="chatbot-header d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="fas fa-robot me-2"></i>Eventora AI Assistant</span>
+        <button id="close-chat" class="btn btn-sm text-white p-0 shadow-none"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="chat-messages" class="chat-body p-3">
+        <div class="ai-message mb-3">
+            <div class="message-bubble glass-panel p-2 small shadow-sm">
+                Hello! I'm your Eventora AI. Ask me about your points, registrations, or upcoming events!
+            </div>
+        </div>
+    </div>
+    <div class="chat-footer p-2 border-top border-white border-opacity-10">
+        <div class="input-group">
+            <input type="text" id="userInput"
+                class="form-control form-control-sm bg-transparent text-white border-0 shadow-none"
+                placeholder="Ask me something..." autocomplete="off">
+            <button onclick="sendMessage()"
+                class="btn btn-sm rounded-circle ms-2 d-flex align-items-center justify-content-center shadow-sm"
+                style="width: 35px; height: 35px; min-width: 35px; background: linear-gradient(135deg, #f39c12, #e67e22); border: none; color: white;">
+                <i class="fas fa-paper-plane" style="font-size: 0.9rem;"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<button id="chatbot-toggle" class="btn rounded-circle shadow-lg animate__animated animate__bounceIn"
+    style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; border: none; width: 60px; height: 60px;">
+    <i class="fas fa-comment-dots fa-lg"></i>
+</button>
+
+<style>
+    /* Chatbot Styles */
+    #chatbot-toggle {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 1050;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #chatbot-toggle:hover {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    #chatbot-container {
+        position: fixed;
+        bottom: 100px;
+        right: 30px;
+        width: 350px;
+        height: 480px;
+        z-index: 2000;
+        display: flex;
+        flex-direction: column;
+        background: rgba(15, 23, 42, 0.85);
+        /* Deep dark background */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+        transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    #chatbot-container.chatbot-closed {
+        opacity: 0;
+        transform: translateY(50px) scale(0.8);
+        pointer-events: none;
+    }
+
+    .chatbot-header {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        padding: 15px;
+        border-radius: 20px 20px 0 0;
+        color: white;
+    }
+
+    .chat-body {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .message-bubble {
+        max-width: 85%;
+        border-radius: 18px;
+        color: white;
+        word-wrap: break-word;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .ai-message .message-bubble {
+        background: rgba(255, 255, 255, 0.1);
+        border-bottom-left-radius: 4px;
+        align-self: flex-start;
+    }
+
+    .user-message {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .user-message .message-bubble {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        border-bottom-right-radius: 4px;
+        animation: slideInRight 0.3s ease-out;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .chat-body::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .chat-body::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+    }
+
+    .chat-footer {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 0 0 20px 20px;
+    }
+</style>
+
+<script>
+    // Chatbot Frontend Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const chatbotToggle = document.getElementById('chatbot-toggle');
+        const chatbotContainer = document.getElementById('chatbot-container');
+        const closeChat = document.getElementById('close-chat');
+        const userInput = document.getElementById('userInput');
+        const chatMessages = document.getElementById('chat-messages');
+
+        chatbotToggle.addEventListener('click', () => {
+            chatbotContainer.classList.toggle('chatbot-closed');
+            if (!chatbotContainer.classList.contains('chatbot-closed')) {
+                userInput.focus();
+                // Scroll to bottom
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+
+        closeChat.addEventListener('click', () => {
+            chatbotContainer.classList.add('chatbot-closed');
+        });
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        window.sendMessage = () => {
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // Add user message to UI
+            appendMessage('user', message);
+            userInput.value = '';
+
+            // Add loading state
+            const loadingId = 'loading-' + Date.now();
+            appendMessage('ai', '<span class="loading-dots">... thinking</span>', loadingId);
+
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            fetch("/chatbot", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: message })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const loadingBubble = document.getElementById(loadingId);
+                    if (loadingBubble) {
+                        loadingBubble.innerHTML = data.reply.replace(/\n/g, '<br>');
+                    } else {
+                        appendMessage('ai', data.reply.replace(/\n/g, '<br>'));
+                    }
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                })
+                .catch(error => {
+                    const loadingBubble = document.getElementById(loadingId);
+                    if (loadingBubble) loadingBubble.innerHTML = "I'm having trouble connecting. Check your internet!";
+                });
+        };
+
+        function appendMessage(sender, text, id = null) {
+            const div = document.createElement('div');
+            div.className = sender === 'user' ? 'user-message mb-3' : 'ai-message mb-3';
+            div.innerHTML = `
+                <div class="message-bubble ${sender === 'user' ? 'p-3' : 'glass-panel p-3'} small" ${id ? 'id="' + id + '"' : ''}>
+                    ${text}
+                </div>
+            `;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

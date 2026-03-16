@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block title %}Events{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-5 animate__animated animate__fadeIn">
+    <div>
+        <h2 class="fw-800 mb-1">Campus Events</h2>
+        <p class="text-secondary mb-0">Discover and participate in upcoming university activities</p>
+    </div>
+    {% if session.get('is_admin') %}
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i> Create Event
+    </a>
+    {% endif %}
+</div>
+
+{% if events %}
+<div class="row g-4 animate__animated animate__fadeInUp">
+    {% for event in events %}
+    <div class="col-12 col-lg-6">
+        <div class="card glass-panel h-100 border-0 shadow-lg overflow-hidden transition-hover">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div class="d-flex flex-wrap gap-2">
+                        <span
+                            class="badge rounded-pill {% if event.status == 'Open' %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-10 {% if event.status == 'Open' %}text-success{% else %}text-secondary{% endif %} px-3 py-2 fw-semibold">
+                            <i
+                                class="fas {% if event.status == 'Open' %}fa-unlock{% else %}fa-lock{% endif %} me-1 small"></i>
+                            {{ event.status }}
+                        </span>
+                        {% if event.require_face_photo %}
+                        <span class="badge rounded-pill px-3 py-2 fw-semibold"
+                            style="background:rgba(108,99,255,0.15);color:#a78bfa;">
+                            <i class="fas fa-user-circle me-1 small"></i> Face ID Required
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <h6 class="text-accent mb-0 fw-bold"><i class="fas fa-calendar-day me-2"></i>{{ event.event_date
+                            }}</h6>
+                    </div>
+                </div>
+
+                <h4 class="fw-bold mb-3">{{ event.event_name }}</h4>
+                <p class="text-secondary small mb-4"
+                    style="display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                    {{ event.description }}
+                </p>
+
+                <div class="d-flex align-items-center mb-4 text-secondary small">
+                    <div class="me-4"><i class="fas fa-map-marker-alt text-accent me-2"></i>{{ event.location }}</div>
+                    {% if event.coordinator_name %}
+                    <div><i class="fas fa-user-tie text-accent me-2"></i>{{ event.coordinator_name }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex gap-2 mt-auto">
+                    {% if session.get('role') == 'faculty' %}
+                    <a href="{{ url_for('faculty.scan_attendance') }}" class="btn btn-warning flex-fill py-2">
+                        <i class="fas fa-qrcode me-2"></i> Scan Attendance
+                    </a>
+                    {% if session.get('is_admin') %}
+                    <button type="button" class="btn btn-outline-primary px-3" data-bs-toggle="modal"
+                        data-bs-target="#editEventModal" data-event-id="{{ event.event_id }}"
+                        data-event-name="{{ event.event_name }}" data-event-date="{{ event.event_date }}"
+                        data-location="{{ event.location }}" data-description="{{ event.description }}"
+                        data-coordinator-id="{{ event.coordinator_id }}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    {% if event.is_announced %}
+                    <a href="{{ url_for('admin.toggle_event_status', event_id=event.event_id, new_status='Closed' if event.status == 'Open' else 'Open') }}"
+                        class="btn {% if event.status == 'Open' %}btn-secondary{% else %}btn-success{% endif %} px-3"
+                        title="{% if event.status == 'Open' %}Temporarily Close Event{% else %}Reopen Event{% endif %}">
+                        <i class="fas {% if event.status == 'Open' %}fa-lock{% else %}fa-unlock{% endif %}"></i>
+                    </a>
+                    <button class="btn btn-success px-3" disabled title="Already Announced">
+                        <i class="fas fa-bullhorn"></i>
+                    </button>
+                    {% else %}
+                    <a href="{{ url_for('admin.announce_event', event_id=event.event_id) }}"
+                        class="btn btn-warning px-3 announce-btn" title="Announce to Students & Faculty"
+                        onclick="if(confirm('Announce this event to all students and faculty?')) { this.innerHTML='<i class=\'fas fa-spinner fa-spin\'></i>'; this.classList.add('disabled'); return true; } return false;">
+                        <i class="fas fa-bullhorn"></i>
+                    </a>
+                    {% endif %}
+                    <button type="button" class="btn btn-outline-danger px-3" data-bs-toggle="modal"
+                        data-bs-target="#deleteEventModal" data-event-id="{{ event.event_id }}"
+                        data-event-name="{{ event.event_name }}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    {% endif %}
+                    {% elif session.get('role') == 'student' %}
+                    {% if event.status == 'Closed' %}
+                    <button class="btn btn-secondary flex-fill py-2" disabled>
+                        <i class="fas fa-ban me-2"></i> Registration Closed
+                    </button>
+                    {% elif event.deadline_passed %}
+                    <button class="btn btn-danger flex-fill py-2" disabled>
+                        <i class="fas fa-clock me-2"></i> Deadline Passed
+                    </button>
+                    {% elif event.is_registered %}
+                    <button class="btn btn-success flex-fill py-2" disabled>
+                        <i class="fas fa-check-circle me-2"></i> Registered Successfully
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-primary flex-fill py-2" data-bs-toggle="modal"
+                        data-bs-target="#eventRegisterModal" data-event-id="{{ event.event_id }}"
+                        data-event-name="{{ event.event_name }}"
+                        data-require-face="{{ event.require_face_photo|default(0) }}">
+                        <i class="fas fa-plus-circle me-2"></i> Register Now
+                    </button>
+                    {% endif %}
+                    {% else %}
+                    <a href="/login" class="btn btn-primary flex-fill py-2">Login to Register</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination Controls -->
+<nav aria-label="Page navigation" class="mt-5">
+    <ul class="pagination justify-content-center gap-2">
+        {% if page > 1 %}
+        <li class="page-item">
+            <a class="page-link rounded-3 border-0 glass-panel px-4 py-2"
+                href="{{ url_for('public.events', page=page-1) }}">
+                <i class="fas fa-chevron-left me-2 small"></i> Previous
+            </a>
+        </li>
+        {% endif %}
+
+        <li class="page-item d-flex align-items-center mx-3">
+            <span class="text-secondary small fw-bold">Page {{ page }} of {{ total_pages }}</span>
+        </li>
+
+        {% if page < total_pages %} <li class="page-item">
+            <a class="page-link rounded-3 border-0 glass-panel px-4 py-2"
+                href="{{ url_for('public.events', page=page+1) }}">
+                Next <i class="fas fa-chevron-right ms-2 small"></i>
+            </a>
+            </li>
+            {% endif %}
+    </ul>
+</nav>
+
+<!-- Event Registration Modal (2-step: Face Capture → Form) -->
+<div class="modal fade" id="eventRegisterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-ui text-dark">
+            <div class="modal-header border-0">
+                <div>
+                    <h5 class="modal-title mb-0">Register for <span id="modalEventName" class="text-primary"></span>
+                    </h5>
+                    <small id="regStepLabel" class="text-white-50"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+
+                <!-- STEP 1: Face Capture -->
+                <div id="faceStep" class="d-none">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle d-inline-flex p-2 mb-2" style="background:rgba(108,99,255,0.2);">
+                            <i class="fas fa-user-circle fa-2x" style="color:#a78bfa;"></i>
+                        </div>
+                        <h6 class="fw-bold">Face Verification Required</h6>
+                        <p class="text-muted small">This event requires a selfie for attendance. Look directly at the
+                            camera and click Capture.</p>
+                    </div>
+                    <div class="position-relative rounded-3 overflow-hidden mb-3"
+                        style="background:#000;max-height:300px;">
+                        <video id="regVideo" autoplay playsinline
+                            style="width:100%;max-height:300px;object-fit:cover;display:block;"></video>
+                        <div
+                            style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:140px;height:185px;border:2.5px solid rgba(108,200,255,0.7);border-radius:50%;box-shadow:0 0 0 9999px rgba(0,0,0,0.35);pointer-events:none;">
+                        </div>
+                    </div>
+                    <canvas id="regCanvas" class="d-none"></canvas>
+                    <div id="capturePreview" class="d-none text-center mb-3">
+                        <img id="capturedImg" src="" class="rounded-3 shadow"
+                            style="max-width:180px;border:2px solid rgba(108,99,255,0.5);">
+                        <p class="text-success small mt-2"><i class="fas fa-check-circle me-1"></i>Photo captured!
+                            Proceed to register.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary flex-fill fw-bold" id="captureBtn"
+                            onclick="regCapture()">
+                            <i class="fas fa-camera me-2"></i>Capture Photo
+                        </button>
+                        <button type="button" class="btn btn-success flex-fill fw-bold d-none" id="proceedBtn"
+                            onclick="regProceed()">
+                            <i class="fas fa-arrow-right me-2"></i>Proceed to Register
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Registration Form -->
+                <div id="formStep">
+                    <form id="registrationForm" method="POST" action="">
+                        <input type="hidden" name="face_photo" id="formFacePhoto">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="name" class="form-control" value="{{ session.get('name', '') }}"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Register Number</label>
+                            <input type="text" name="register_number" class="form-control"
+                                value="{{ session.get('register_number', '') }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ session.get('email', '') }}"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Semester</label>
+                            <select name="semester" class="form-select" required>
+                                <option value="" {% if not session.get('semester') %}selected{% endif %} disabled>Select
+                                    Semester</option>
+                                {% for i in range(1, 9) %}
+                                <option value="{{ i }}" {% if session.get('semester')|string==i|string %}selected{%
+                                    endif %}>
+                                    {{ i }}{% if i == 1 %}st{% elif i == 2 %}nd{% elif i == 3 %}rd{% else %}th{% endif
+                                    %} Semester
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary fw-bold">Confirm Registration</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let _regStream = null;
+    let _requireFace = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const registerModal = document.getElementById('eventRegisterModal');
+        if (!registerModal) return;
+
+        registerModal.addEventListener('show.bs.modal', ev => {
+            const btn = ev.relatedTarget;
+            const eventId = btn.getAttribute('data-event-id');
+            const eventName = btn.getAttribute('data-event-name');
+            _requireFace = btn.getAttribute('data-require-face') === '1';
+
+            document.getElementById('modalEventName').textContent = eventName;
+            document.getElementById('registrationForm').action = `/register-event/${eventId}`;
+
+            // Reset steps
+            document.getElementById('faceStep').classList.add('d-none');
+            document.getElementById('formStep').classList.remove('d-none');
+            document.getElementById('capturePreview').classList.add('d-none');
+            document.getElementById('captureBtn').classList.remove('d-none');
+            document.getElementById('proceedBtn').classList.add('d-none');
+            document.getElementById('formFacePhoto').value = '';
+            document.getElementById('regStepLabel').textContent = '';
+
+            if (_requireFace) {
+                document.getElementById('faceStep').classList.remove('d-none');
+                document.getElementById('formStep').classList.add('d-none');
+                document.getElementById('regStepLabel').textContent = 'Step 1 of 2 — Face Verification';
+                startRegCamera();
+            }
+        });
+
+        registerModal.addEventListener('hide.bs.modal', () => stopRegCamera());
+    });
+
+    function startRegCamera() {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+            .then(stream => {
+                _regStream = stream;
+                document.getElementById('regVideo').srcObject = stream;
+            })
+            .catch(() => {
+                alert('Camera access denied. Please allow camera to continue.');
+            });
+    }
+
+    function stopRegCamera() {
+        if (_regStream) { _regStream.getTracks().forEach(t => t.stop()); _regStream = null; }
+    }
+
+    function regCapture() {
+        const video = document.getElementById('regVideo');
+        const canvas = document.getElementById('regCanvas');
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+        document.getElementById('capturedImg').src = dataUrl;
+        document.getElementById('capturePreview').classList.remove('d-none');
+        document.getElementById('captureBtn').textContent = 'Retake';
+        document.getElementById('captureBtn').innerHTML = '<i class="fas fa-redo me-2"></i>Retake';
+        document.getElementById('proceedBtn').classList.remove('d-none');
+
+        // Store base64 data
+        document.getElementById('capturedFaceData') && (document.getElementById('capturedFaceData').value = dataUrl);
+    }
+
+    function regProceed() {
+        const data = document.getElementById('capturedImg').src;
+        document.getElementById('formFacePhoto').value = data;
+        stopRegCamera();
+        document.getElementById('faceStep').classList.add('d-none');
+        document.getElementById('formStep').classList.remove('d-none');
+        document.getElementById('regStepLabel').textContent = 'Step 2 of 2 — Fill Details';
+    }
+</script>
+
+<!-- Edit Event Modal -->
+<div class="modal fade" id="editEventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-ui text-dark">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Edit Event: <span id="editModalEventNameDisplay"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editEventForm" method="POST" action="">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Event Name</label>
+                            <input type="text" name="event_name" id="edit_event_name" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Event Date</label>
+                            <input type="date" name="event_date" id="edit_event_date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Location</label>
+                            <input type="text" name="location" id="edit_location" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Coordinator</label>
+                            <select name="coordinator_id" id="edit_coordinator_id" class="form-select" required>
+                                {% if faculty_list %}
+                                {% for faculty in faculty_list %}
+                                <option value="{{ faculty.faculty_id }}">{{ faculty.name }} ({{ faculty.department }})
+                                </option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" id="edit_description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Update Event Details</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const editModal = document.getElementById('editEventModal');
+        if (editModal) {
+            editModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const eventId = button.getAttribute('data-event-id');
+                const eventName = button.getAttribute('data-event-name');
+                const eventDate = button.getAttribute('data-event-date');
+                const location = button.getAttribute('data-location');
+                const description = button.getAttribute('data-description');
+                const coordinatorId = button.getAttribute('data-coordinator-id');
+
+                document.getElementById('editModalEventNameDisplay').textContent = eventName;
+                document.getElementById('edit_event_name').value = eventName;
+                document.getElementById('edit_event_date').value = eventDate;
+                document.getElementById('edit_location').value = location;
+                document.getElementById('edit_description').value = description;
+                document.getElementById('edit_coordinator_id').value = coordinatorId;
+
+                const form = document.getElementById('editEventForm');
+                form.action = `/admin/edit-event/${eventId}`;
+            });
+        }
+    });
+</script>
+
+<!-- Delete Event Confirmation Modal -->
+<div class="modal fade" id="deleteEventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the event <strong id="deleteEventName"></strong>?</p>
+                <p class="text-danger"><small>This will also remove all registrations and attendance records for this
+                        event. This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <a id="deleteEventBtn" href="#" class="btn btn-danger load-page">
+                    <i class="fas fa-trash-alt me-1"></i> Delete Event
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const deleteModal = document.getElementById('deleteEventModal');
+        if (deleteModal) {
+            deleteModal.addEventListener('show.bs.modal', event => {
+                const button = event.relatedTarget;
+                const eventId = button.getAttribute('data-event-id');
+                const eventName = button.getAttribute('data-event-name');
+
+                document.getElementById('deleteEventName').textContent = eventName;
+                document.getElementById('deleteEventBtn').href = `/admin/delete-event/${eventId}`;
+            });
+        }
+    });
+</script>
+{% else %}
+<div class="alert alert-info text-center">
+    No events available.
+</div>
+{% endif %}
+{% endblock %}

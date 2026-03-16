@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Daily Attendance Log{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-white mb-0">
+            <i class="fas fa-history me-2 text-success"></i>Daily Attendance Records
+        </h3>
+        <div class="d-flex gap-2">
+            <form id="attendanceDateForm" method="GET" class="d-flex align-items-center">
+                <input type="date" name="date" value="{{ today_date }}"
+                    class="form-control glass-input text-white border-0 me-2" onchange="this.form.submit()">
+            </form>
+            <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Today's Quick Mark Section -->
+    <div class="card glass-panel border-0 shadow-lg p-4 mb-4">
+        <h5 class="text-white mb-3"><i class="fas fa-calendar-check me-2 text-warning"></i>Mark Today's Attendance ({{
+            today_date }})</h5>
+        {% if today_slots %}
+        <div class="table-responsive">
+            <table class="table table-hover text-white align-middle small">
+                <thead class="table-dark bg-transparent">
+                    <tr>
+                        <th>Course</th>
+                        <th>Faculty</th>
+                        <th>Slot</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for slot in today_slots %}
+                    <tr>
+                        <td class="fw-bold">{{ slot.course_name }}</td>
+                        <td>{{ slot.faculty_name }}</td>
+                        <td><span class="badge bg-info text-dark">{{ slot.start_time }} - {{ slot.end_time }}</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('admin.view_attendance_detail', timetable_id=slot.timetable_id, date=today_date) }}"
+                                class="btn btn-sm btn-success fw-bold">
+                                <i class="fas fa-plus me-1"></i>Mark
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-white-50 mb-0">No classes scheduled for today.</p>
+        {% endif %}
+    </div>
+
+    <div class="card glass-panel border-0 shadow-lg p-0 overflow-hidden">
+        <div class="card-header bg-white bg-opacity-10 border-0 p-4">
+            <h5 class="text-white mb-0">Attendance History</h5>
+            <p class="text-white-50 small mb-0">Search and view historical attendance data marked by faculty.</p>
+        </div>
+
+        <div class="card-body p-4">
+            {% if records %}
+            <div class="table-responsive">
+                <table class="table table-hover text-white align-middle data-table">
+                    <thead class="table-dark bg-transparent">
+                        <tr>
+                            <th>Date</th>
+                            <th>Course</th>
+                            <th>Faculty</th>
+                            <th>Dept/Sem</th>
+                            <th>Attendance</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td><span class="badge bg-primary">{{ record.attendance_date }}</span></td>
+                            <td class="fw-bold">{{ record.course_name }}</td>
+                            <td>{{ record.faculty_name }}</td>
+                            <td>{{ record.department }} - {{ record.semester }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-2"
+                                        style="height: 6px; width: 100px; background: rgba(255,255,255,0.1);">
+                                        {% set percent = (record.present_count / record.total_students * 100)|round if
+                                        record.total_students > 0 else 0 %}
+                                        <div class="progress-bar bg-success" role="progressbar"
+                                            data-width="{{ percent }}"></div>
+                                    </div>
+                                    <small class="text-white-50">{{ record.present_count }}/{{ record.total_students
+                                        }}</small>
+                                </div>
+                            </td>
+                            <td class="text-end">
+                                <a href="{{ url_for('admin.view_attendance_detail', timetable_id=record.timetable_id, date=record.attendance_date) }}"
+                                    class="btn btn-sm btn-info fw-bold">
+                                    <i class="fas fa-eye me-1"></i>View/Edit
+                                </a>
+                                <button class="btn btn-sm btn-danger fw-bold delete-att-btn"
+                                    data-url="{{ url_for('admin.delete_attendance', timetable_id=record.timetable_id, date=record.attendance_date) }}"
+                                    data-label="{{ record.course_name }} – {{ record.attendance_date }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-folder-open fa-3x mb-3 text-white-50"></i>
+                <p class="text-white-50">No attendance records found yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteAttModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui text-center p-4 border-0">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <i class="fas fa-exclamation-triangle fa-5x text-warning"></i>
+                </div>
+                <h4 class="mt-3 fw-bold text-danger">Delete Attendance?</h4>
+                <p class="mb-1 text-white-50">This will permanently delete all attendance records for:</p>
+                <p class="fw-bold text-white mb-4" id="deleteAttLabel"></p>
+                <div class="d-flex justify-content-center gap-3">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a id="confirmDeleteAtt" href="#" class="btn btn-danger fw-bold">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('[data-width]').forEach(el => {
+        el.style.width = el.dataset.width + '%';
+    });
+    document.querySelectorAll('.delete-att-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('deleteAttLabel').textContent = this.getAttribute('data-label');
+            document.getElementById('confirmDeleteAtt').href = this.getAttribute('data-url');
+            new bootstrap.Modal(document.getElementById('deleteAttModal')).show();
+        });
+    });
+</script>
+{% endblock %}

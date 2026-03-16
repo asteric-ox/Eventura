@@ -1,0 +1,1028 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Master Timetable{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h2><i class="fas fa-calendar-alt me-2"></i>Master Timetable Management</h2>
+    </div>
+    <div class="col-md-12 text-end d-flex justify-content-end gap-2">
+        <a href="{{ url_for('admin.delete_all_timetable') }}" class="btn btn-outline-danger fw-bold shadow-sm"
+            onclick="return confirm('CRITICAL: This will permanently delete EVERY slot in the master timetable. Are you absolutely sure?');">
+            <i class="fas fa-trash-alt me-1"></i> Clear All
+        </a>
+        <button class="btn btn-info text-white fw-bold shadow-sm" data-bs-toggle="modal"
+            data-bs-target="#aiImportModal">
+            <i class="fas fa-magic me-1"></i> AI Smart Import
+        </button>
+        <button class="btn btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addSlotModal">
+            <i class="fas fa-plus me-1"></i> Assign New Slot
+        </button>
+    </div>
+</div>
+
+<!-- Timetable View -->
+<div class="card shadow-sm glass-ui">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Day</th>
+                        <th>Time</th>
+                        <th>Course</th>
+                        <th>Dept/Sem</th>
+                        <th>Faculty</th>
+                        <th>Room</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for slot in timetable %}
+                    <tr class="{% if not slot.course_id %}table-warning text-dark{% endif %}">
+                        <td>{{ slot.day }}</td>
+                        <td>{{ slot.start_time|fmt_time }} – {{ slot.end_time|fmt_time }}</td>
+                        <td class="fw-bold">
+                            {% if slot.course_id %}
+                            {{ slot.course_name }}
+                            {% else %}
+                            <span class="badge bg-danger text-uppercase px-3 py-2"><i class="fas fa-mug-hot me-1"></i>
+                                BREAK / INTERVAL</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ slot.department or '---' }}</span>
+                            <span class="badge bg-dark">Sem {{ slot.semester or '?' }}</span>
+                        </td>
+                        <td>{{ slot.faculty_name or '---' }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ slot.classroom or 'N/A' }}</span></td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                    data-bs-target="#editSlotModal" data-slot-id="{{ slot.timetable_id }}"
+                                    data-course-id="{{ slot.course_id or '' }}"
+                                    data-faculty-id="{{ slot.faculty_id or '' }}" data-day="{{ slot.day }}"
+                                    data-start="{{ slot.start_time }}" data-end="{{ slot.end_time }}"
+                                    data-room="{{ slot.classroom or '' }}" data-department="{{ slot.department or '' }}"
+                                    data-semester="{{ slot.semester or '' }}"
+                                    data-is-break="{% if not slot.course_id %}true{% else %}false{% endif %}"
+                                    onclick="fillEditModal(this)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <a href="{{ url_for('admin.delete_timetable_slot_admin', slot_id=slot.timetable_id) }}"
+                                    class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Delete this schedule?');">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No schedules found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Slot Modal -->
+<div class="modal fade" id="addSlotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui text-dark shadow-lg">
+            <div class="modal-header border-0 bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-plus-circle me-2"></i>Assign Class or Break</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form action="{{ url_for('admin.manage_timetable') }}" method="POST">
+
+                    <div
+                        class="form-check form-switch mb-4 p-3 bg-light rounded-3 border border-primary border-opacity-10">
+                        <input class="form-check-input ms-0" type="checkbox" name="is_break" id="isBreakToggle"
+                            onchange="toggleBreakFields()">
+                        <label class="form-check-label ms-2 fw-bold text-primary" for="isBreakToggle">
+                            <i class="fas fa-coffee me-1"></i> This is a Break / Interval Slot
+                        </label>
+                    </div>
+
+                    <div id="standardFields">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Course</label>
+                            <select name="course_id" id="course_id" class="form-select" required>
+                                <option value="">Select Course...</option>
+                                {% for c in courses %}
+                                <option value="{{ c.course_id }}">{{ c.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Faculty Coordinator</label>
+                            <select name="faculty_id" id="faculty_id" class="form-select" required>
+                                <option value="">Select Faculty...</option>
+                                {% for f in faculty_list %}
+                                <option value="{{ f.faculty_id }}">{{ f.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Classroom</label>
+                            <input type="text" name="classroom" id="classroom" class="form-control"
+                                placeholder="e.g. Room 305" required>
+                        </div>
+                    </div>
+
+                    <div id="deptSemFields">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small fw-bold text-muted">Department</label>
+                                <input type="text" name="department" id="department" class="form-control"
+                                    placeholder="e.g. CSE">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label small fw-bold text-muted">Semester</label>
+                                <select name="semester" id="semester" class="form-select">
+                                    <option value="">Select...</option>
+                                    {% for i in range(1, 9) %}
+                                    <option value="{{ i }}">{{ i }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Day(s) of Week</label>
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="allDaysToggle"
+                                    onchange="toggleAllDays(this)">
+                                <label class="form-check-label fw-bold text-primary" for="allDaysToggle">
+                                    <i class="fas fa-calendar-check me-1"></i> All Days (Mon – Sat)
+                                </label>
+                            </div>
+                            <hr class="my-2">
+                            <div class="row g-2">
+                                {% for d in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input day-checkbox" type="checkbox" name="days"
+                                            value="{{ d }}" id="day_{{ d }}">
+                                        <label class="form-check-label" for="day_{{ d }}">{{ d }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Period Picker -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">
+                            <i class="fas fa-bolt me-1 text-warning"></i>Quick Period Picker
+                            <span class="text-muted fw-normal ms-1">(9:00 AM – 4:00 PM)</span>
+                        </label>
+                        <div class="d-flex flex-wrap gap-2 p-3 bg-light rounded-3 border">
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold"
+                                onclick="setPeriod('09:00','10:00')">P1<br><small>9:00–10:00</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold"
+                                onclick="setPeriod('10:00','11:00')">P2<br><small>10:00–11:00</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-bold"
+                                onclick="setPeriod('11:00','11:10')">Break<br><small>11:00–11:10</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold"
+                                onclick="setPeriod('11:10','12:10')">P3<br><small>11:10–12:10</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-warning fw-bold text-dark"
+                                onclick="setPeriod('12:10','12:50')">Lunch<br><small>12:10–12:50</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold"
+                                onclick="setPeriod('12:50','13:50')">P4<br><small>12:50–1:50</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-bold"
+                                onclick="setPeriod('13:50','14:00')">Break<br><small>1:50–2:00</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold"
+                                onclick="setPeriod('14:00','15:00')">P5<br><small>2:00–3:00</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-primary fw-bold"
+                                onclick="setPeriod('15:00','16:00')">P6<br><small>3:00–4:00</small></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary fw-bold"
+                                onclick="setPeriod('09:00','16:00')">Full Day<br><small>9:00–4:00</small></button>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted">Start Time</label>
+                            <div class="input-group">
+                                <input type="time" name="start_time" id="add_start_time" class="form-control" required
+                                    oninput="updateAmPm('add_start_time','add_start_ampm')">
+                                <span class="input-group-text fw-bold" id="add_start_ampm"
+                                    style="min-width:54px; justify-content:center;">--</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted">End Time</label>
+                            <div class="input-group">
+                                <input type="time" name="end_time" id="add_end_time" class="form-control" required
+                                    oninput="updateAmPm('add_end_time','add_end_ampm')">
+                                <span class="input-group-text fw-bold" id="add_end_ampm"
+                                    style="min-width:54px; justify-content:center;">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="button" class="btn btn-primary btn-lg fw-bold shadow"
+                            onclick="submitMultiDaySlot(this)">
+                            <i class="fas fa-save me-2"></i>Assign Schedule
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Slot Modal -->
+<div class="modal fade" id="editSlotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui text-dark shadow-2xl">
+            <div class="modal-header border-0 bg-warning">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2"></i>Edit Schedule Slot</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form action="{{ url_for('admin.edit_timetable_slot_admin') }}" method="POST">
+                    <input type="hidden" name="slot_id" id="edit_slot_id">
+
+                    <div
+                        class="form-check form-switch mb-3 p-2 bg-light rounded shadow-sm border align-items-center d-flex">
+                        <input class="form-check-input ms-0" type="checkbox" name="is_break" id="editIsBreakToggle"
+                            onchange="toggleEditBreakFields()">
+                        <label class="form-check-label ms-3 fw-bold text-dark mb-0" for="editIsBreakToggle">
+                            Interval / Break
+                        </label>
+                    </div>
+
+                    <div id="editStandardFields">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Course</label>
+                            <select name="course_id" id="edit_course_id" class="form-select">
+                                <option value="">Select Course...</option>
+                                {% for c in courses %}
+                                <option value="{{ c.course_id }}">{{ c.course_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Faculty</label>
+                            <select name="faculty_id" id="edit_faculty_id" class="form-select">
+                                <option value="">Select Faculty...</option>
+                                {% for f in faculty_list %}
+                                <option value="{{ f.faculty_id }}">{{ f.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Room</label>
+                            <input type="text" name="classroom" id="edit_classroom" class="form-control"
+                                placeholder="Room #">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted">Department</label>
+                            <input type="text" name="department" id="edit_department" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted">Semester</label>
+                            <select name="semester" id="edit_semester" class="form-select">
+                                <option value="">Select...</option>
+                                {% for i in range(1, 9) %}
+                                <option value="{{ i }}">{{ i }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Apply To Day(s)</label>
+                        <div class="p-3 bg-light rounded-3 border">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="editAllDaysToggle"
+                                    onchange="toggleEditAllDays(this)">
+                                <label class="form-check-label fw-bold text-primary" for="editAllDaysToggle">
+                                    <i class="fas fa-calendar-check me-1"></i> Update Multiple Days
+                                </label>
+                            </div>
+                            <hr class="my-2">
+                            <div class="row g-2">
+                                {% for d in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] %}
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input edit-day-checkbox" type="checkbox"
+                                            name="edit_days" value="{{ d }}" id="edit_day_{{ d }}">
+                                        <label class="form-check-label" for="edit_day_{{ d }}">{{ d }}</label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted">Start</label>
+                            <div class="input-group">
+                                <input type="time" name="start_time" id="edit_start_time" class="form-control" required
+                                    oninput="updateAmPm('edit_start_time','edit_start_ampm')">
+                                <span class="input-group-text fw-bold" id="edit_start_ampm"
+                                    style="min-width:54px; justify-content:center;">--</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold text-muted">End</label>
+                            <div class="input-group">
+                                <input type="time" name="end_time" id="edit_end_time" class="form-control" required
+                                    oninput="updateAmPm('edit_end_time','edit_end_ampm')">
+                                <span class="input-group-text fw-bold" id="edit_end_ampm"
+                                    style="min-width:54px; justify-content:center;">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="button" class="btn btn-warning fw-bold text-dark"
+                            onclick="submitEditMultiDaySlot(this)">
+                            <i class="fas fa-sync-alt me-2"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Import Modal moved before scripts to ensure IDs exist -->
+<div class="modal fade" id="aiImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content glass-ui text-dark shadow-lg">
+            <div class="modal-header border-0 bg-info text-white">
+                <h5 class="modal-title fw-bold"><i class="fas fa-magic me-2"></i>AI Timetable Smart Import</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="uploadStep">
+                    <div id="dropZone"
+                        class="text-center py-5 border-2 border-dashed border-info rounded-4 bg-light bg-opacity-50"
+                        style="cursor: pointer; transition: all 0.2s ease-in-out;">
+                        <i class="fas fa-cloud-upload-alt fa-4x text-info mb-3 opacity-50"></i>
+                        <h4 class="fw-bold">Drag & Drop Timetable</h4>
+                        <p class="text-muted">Upload an image or PDF to automatically prepare your master schedule</p>
+                        <input type="file" id="timetableImage" class="d-none" accept="image/*,.pdf"
+                            onchange="processImage()">
+                        <button class="btn btn-info text-white px-5 fw-bold shadow mt-3"
+                            onclick="document.getElementById('timetableImage').click()">
+                            <i class="fas fa-search me-2"></i>Select File (Image/PDF)
+                        </button>
+                    </div>
+                </div>
+                <div id="processingStep" class="d-none text-center py-5">
+                    <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;"></div>
+                    <h4 id="processingStatus" class="fw-bold">Scanning Document...</h4>
+                </div>
+                <div id="reviewStep" class="d-none">
+                    <h6 class="fw-bold text-info mb-3"><i class="fas fa-tasks me-2"></i>Review Extracted Slots</h6>
+                    <div class="table-responsive shadow-sm rounded border bg-white" style="max-height: 400px;">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="bg-dark text-white">
+                                <tr>
+                                    <th class="ps-3" style="width: 15%;">Original Text</th>
+                                    <th>Course</th>
+                                    <th>Faculty</th>
+                                    <th>Dept/Sem</th>
+                                    <th>Day</th>
+                                    <th>Schedule</th>
+                                    <th>Room</th>
+                                    <th class="text-center">RM</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ocrReviewBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between mt-4">
+                        <button class="btn btn-light border px-4" onclick="resetAIImport()">Cancel</button>
+                        <button class="btn btn-success px-5 fw-bold shadow-lg" onclick="saveBulkTimetable(this)">
+                            <i class="fas fa-save me-2"></i>Save These Slots
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script type="application/json" id="coursesData">
+[{% for c in courses %}{"id":{{ c.course_id }},"name":"{{ c.course_name|e }}","dept":"{{ c.department|e }}","sem":"{{ c.semester|e }}"}{% if not loop.last %},{% endif %}{% endfor %}]
+</script>
+<script type="application/json" id="facultyData">
+[{% for f in faculty_list %}{"id":{{ f.faculty_id }},"name":"{{ f.name|e }}"}{% if not loop.last %},{% endif %}{% endfor %}]
+</script>
+<script>
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    function toggleBreakFields() {
+        const isBreak = document.getElementById('isBreakToggle').checked;
+        const fields = ['course_id', 'faculty_id', 'classroom'];
+        const standardFieldsDiv = document.getElementById('standardFields');
+
+        if (isBreak) {
+            standardFieldsDiv.style.opacity = '0.5';
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                el.removeAttribute('required');
+                el.disabled = true;
+            });
+            document.getElementById('department').setAttribute('required', 'required');
+            document.getElementById('semester').setAttribute('required', 'required');
+        } else {
+            standardFieldsDiv.style.opacity = '1';
+            fields.forEach(id => {
+                const el = document.getElementById(id);
+                el.setAttribute('required', 'required');
+                el.disabled = false;
+            });
+            document.getElementById('department').removeAttribute('required');
+            document.getElementById('semester').removeAttribute('required');
+        }
+    }
+
+    // AI Import Logic — data embedded as JSON to avoid Jinja2/JS linter conflicts
+    const COURSES = JSON.parse(document.getElementById('coursesData').textContent);
+    const FACULTY = JSON.parse(document.getElementById('facultyData').textContent);
+
+    // AM/PM badge helper
+    function updateAmPm(inputId, badgeId) {
+        const val = document.getElementById(inputId)?.value;
+        const badge = document.getElementById(badgeId);
+        if (!badge) return;
+        if (!val) { badge.textContent = '--'; badge.className = 'input-group-text fw-bold'; return; }
+        const h = parseInt(val.split(':')[0], 10);
+        const isAM = h < 12;
+        badge.textContent = isAM ? 'AM' : 'PM';
+        badge.className = 'input-group-text fw-bold ' + (isAM ? 'text-primary' : 'text-danger');
+    }
+
+    // Quick Period Picker — fills both time inputs and refreshes AM/PM badges
+    function setPeriod(start, end) {
+        const startEl = document.getElementById('add_start_time');
+        const endEl = document.getElementById('add_end_time');
+        if (startEl) { startEl.value = start; updateAmPm('add_start_time', 'add_start_ampm'); }
+        if (endEl) { endEl.value = end; updateAmPm('add_end_time', 'add_end_ampm'); }
+        // Highlight selected button, clear others
+        document.querySelectorAll('[onclick^="setPeriod"]').forEach(btn => {
+            btn.classList.remove('active', 'btn-primary', 'btn-warning', 'btn-danger', 'btn-secondary');
+        });
+    }
+
+    function fillEditModal(btn) {
+        document.getElementById('edit_slot_id').value = btn.dataset.slotId;
+        document.getElementById('edit_course_id').value = btn.dataset.courseId;
+        document.getElementById('edit_faculty_id').value = btn.dataset.facultyId;
+        document.getElementById('edit_day').value = btn.dataset.day;
+        document.getElementById('edit_start_time').value = btn.dataset.start;
+        document.getElementById('edit_end_time').value = btn.dataset.end;
+        document.getElementById('edit_classroom').value = btn.dataset.room;
+        document.getElementById('edit_department').value = btn.dataset.department || '';
+        document.getElementById('edit_semester').value = btn.dataset.semester || '';
+        document.getElementById('editIsBreakToggle').checked = btn.dataset.isBreak === 'true';
+        toggleEditBreakFields();
+        // Update AM/PM badges immediately
+        updateAmPm('edit_start_time', 'edit_start_ampm');
+        updateAmPm('edit_end_time', 'edit_end_ampm');
+
+        // Reset multi-day checkboxes in edit modal
+        document.getElementById('editAllDaysToggle').checked = false;
+        document.querySelectorAll('.edit-day-checkbox').forEach(cb => cb.checked = false);
+        // By default, check the day of the slot being edited
+        const currentDayCb = document.getElementById('edit_day_' + btn.dataset.day);
+        if (currentDayCb) currentDayCb.checked = true;
+    }
+
+    function toggleEditBreakFields() {
+        const isBreak = document.getElementById('editIsBreakToggle').checked;
+        const fields = ['edit_course_id', 'edit_faculty_id', 'edit_classroom'];
+        const standardFieldsDiv = document.getElementById('editStandardFields');
+        if (isBreak) {
+            standardFieldsDiv.style.opacity = '0.5';
+            fields.forEach(id => { const el = document.getElementById(id); el.required = false; el.disabled = true; });
+        } else {
+            standardFieldsDiv.style.opacity = '1';
+            fields.forEach(id => { const el = document.getElementById(id); el.required = true; el.disabled = false; });
+        }
+    }
+
+    function toggleAllDays(masterCb) {
+        document.querySelectorAll('.day-checkbox').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+    }
+
+    function toggleEditAllDays(masterCb) {
+        document.querySelectorAll('.edit-day-checkbox').forEach(cb => {
+            cb.checked = masterCb.checked;
+        });
+    }
+
+    async function submitEditMultiDaySlot(btn) {
+        const form = btn.closest('form');
+        const selectedDays = Array.from(form.querySelectorAll('.edit-day-checkbox:checked')).map(cb => cb.value);
+
+        if (selectedDays.length === 0) {
+            alert('Please select at least one day to update.');
+            return;
+        }
+
+        const slotId = document.getElementById('edit_slot_id').value;
+        const isBreak = document.getElementById('editIsBreakToggle').checked;
+        const courseId = document.getElementById('edit_course_id').value || null;
+        const facultyId = document.getElementById('edit_faculty_id').value || null;
+        const startTime = document.getElementById('edit_start_time').value;
+        const endTime = document.getElementById('edit_end_time').value;
+        const classroom = document.getElementById('edit_classroom').value || '';
+        const department = document.getElementById('edit_department').value || '';
+        const semester = document.getElementById('edit_semester').value || '';
+
+        if (!isBreak && (!courseId || !facultyId)) {
+            alert('Please select a Course and Faculty.');
+            return;
+        }
+        if (!startTime || !endTime) {
+            alert('Please enter Start and End times.');
+            return;
+        }
+
+        btn.disabled = true;
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Syncing...';
+
+        const slots = selectedDays.map(day => ({
+            day,
+            course_id: isBreak ? null : courseId,
+            faculty_id: isBreak ? null : facultyId,
+            start_time: startTime,
+            end_time: endTime,
+            classroom: isBreak ? 'N/A' : classroom,
+            department,
+            semester,
+            is_break: isBreak
+        }));
+
+        try {
+            const res = await fetch('/admin/bulk-update-timetable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slots })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        } catch (e) {
+            alert('Network error: ' + e.message);
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+
+    async function submitMultiDaySlot(btn) {
+        const form = btn.closest('form');
+        const selectedDays = Array.from(form.querySelectorAll('.day-checkbox:checked')).map(cb => cb.value);
+
+        if (selectedDays.length === 0) {
+            alert('Please select at least one day.');
+            return;
+        }
+
+        const isBreak = form.querySelector('[name=is_break]')?.checked || false;
+        const courseId = form.querySelector('[name=course_id]')?.value || null;
+        const facultyId = form.querySelector('[name=faculty_id]')?.value || null;
+        const startTime = form.querySelector('[name=start_time]').value;
+        const endTime = form.querySelector('[name=end_time]').value;
+        const classroom = form.querySelector('[name=classroom]')?.value || '';
+        const department = form.querySelector('[name=department]')?.value || '';
+        const semester = form.querySelector('[name=semester]')?.value || '';
+
+        if (!isBreak && (!courseId || !facultyId)) {
+            alert('Please select a Course and Faculty before assigning.');
+            return;
+        }
+        if (!startTime || !endTime) {
+            alert('Please enter Start and End times.');
+            return;
+        }
+
+        btn.disabled = true;
+        const original = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+        const slots = selectedDays.map(day => ({
+            day,
+            course_id: isBreak ? null : courseId,
+            faculty_id: isBreak ? null : facultyId,
+            start_time: startTime,
+            end_time: endTime,
+            classroom: isBreak ? 'N/A' : classroom,
+            department,
+            semester,
+            is_break: isBreak
+        }));
+
+        try {
+            const res = await fetch('/admin/bulk-add-timetable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slots })
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = original;
+            }
+        } catch (e) {
+            alert('Network error: ' + e.message);
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+
+    async function processImage(droppedFile = null) {
+        const file = droppedFile || document.getElementById('timetableImage').files[0];
+        if (!file) return;
+
+        // Warning for very large files
+        if (file.size > 10 * 1024 * 1024) {
+            if (!confirm("This file is very large (>10MB). AI scanning might take several minutes and may slow down your browser. Continue?")) {
+                document.getElementById('timetableImage').value = '';
+                return;
+            }
+        }
+
+        // Show processing UI
+        document.getElementById('uploadStep').classList.add('d-none');
+        document.getElementById('processingStep').classList.remove('d-none');
+        document.getElementById('processingStatus').innerHTML = `
+            <div class="spinner-grow text-info mb-3" role="status"></div>
+            <div class="fw-bold">Initializing AI Engine...</div>
+            <div class="small text-muted mt-2">Connecting to neural networks...</div>
+        `;
+
+        let worker = null;
+        try {
+            let scanSource = file;
+
+            // Pre-check library availability
+            if (typeof Tesseract === 'undefined' || typeof pdfjsLib === 'undefined') {
+                throw new Error("AI libraries are still initializing. Please refresh and wait a moment.");
+            }
+
+            // Handle PDF conversion to Image via PDF.js
+            if (file.type === "application/pdf") {
+                document.getElementById('processingStatus').innerText = "Analyzing PDF Layout...";
+                const arrayBuffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                const pdf = await loadingTask.promise;
+                const page = await pdf.getPage(1);
+
+                // Balance scale for accuracy vs speed
+                let scale = 2.0;
+                const tempViewport = page.getViewport({ scale: 1.0 });
+                if (tempViewport.width < 1000) scale = 2.5;
+                if (tempViewport.width > 2000) scale = 1.5;
+
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                document.getElementById('processingStatus').innerText = "Rendering High-Res Preview...";
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                // Pass canvas directly to avoid massive base64 strings in memory
+                scanSource = canvas;
+            }
+
+            document.getElementById('processingStatus').innerText = "Starting Optical Character Recognition...";
+
+            // Use Worker model for better control and stability in v5
+            worker = await Tesseract.createWorker('eng', 1, {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        const progress = Math.round(m.progress * 100);
+                        document.getElementById('processingStatus').innerHTML = `
+                            <div class="mb-2">Smart Scanning (${progress}%)</div>
+                            <div class="progress" style="height: 10px; border-radius: 5px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                                     role="progressbar" style="width: ${progress}%" 
+                                     aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <small class="text-muted mt-2 d-block">This may take 30-60 seconds for complex files</small>
+                        `;
+                    } else if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
+                        document.getElementById('processingStatus').innerText = "Loading AI Core & Data (Please wait)...";
+                    }
+                }
+            });
+
+            const { data: { text } } = await worker.recognize(scanSource);
+
+            // Cleanup worker immediately
+            await worker.terminate();
+            worker = null;
+
+            if (!text || text.trim().length < 5) {
+                throw new Error("Could not extract any meaningful text from this file. Please ensure it is a clear scan of a timetable.");
+            }
+
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+
+            const dayIndices = { 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6 };
+            let extractedSlots = [];
+
+            lines.forEach((line) => {
+                let lowerLine = line.toLowerCase();
+                // Noise removal
+                lowerLine = lowerLine.replace(/[|\[\]{}()]/g, ' ').replace(/\s+/g, ' ');
+
+                let isBreakLine = /break|interval|lunch|tea|recess/i.test(lowerLine);
+
+                let slot = {
+                    original: line,
+                    isBreak: isBreakLine,
+                    start: "09:00",
+                    end: "10:00",
+                    room: "",
+                    day: "Monday",
+                    courseId: "",
+                    facultyId: ""
+                };
+
+                // Time Detection
+                const timeRegex = /([01]?\d|2[0-3])[:. ]([0-5]\d)\s*(?:AM|PM)?\s*(?:-|to|—)\s*([01]?\d|2[0-3])[:. ]([0-5]\d)\s*(?:AM|PM)?/i;
+                const timeMatch = lowerLine.match(timeRegex);
+                if (timeMatch) {
+                    slot.start = `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+                    slot.end = `${timeMatch[3].padStart(2, '0')}:${timeMatch[4]}`;
+                }
+
+                // Room Detection
+                const roomMatch = line.match(/(?:room|rm|r[- ]?|class|hall)\s*([A-Z0-9]+)/i);
+                if (roomMatch) slot.room = roomMatch[1];
+                else if (isBreakLine) slot.room = "N/A";
+                else slot.room = "301";
+
+                // Day Detection
+                for (let dayName in dayIndices) {
+                    if (lowerLine.includes(dayName.toLowerCase())) {
+                        slot.day = dayName;
+                        break;
+                    }
+                }
+
+                // Course & Faculty Matching
+                if (!isBreakLine) {
+                    for (const c of COURSES) {
+                        const words = c.name.toLowerCase().split(' ').filter(w => w.length > 2);
+                        const matchCount = words.filter(w => lowerLine.includes(w)).length;
+                        if (matchCount >= Math.ceil(words.length * 0.7) || lowerLine.includes(c.name.toLowerCase())) {
+                            slot.courseId = c.id;
+                            break;
+                        }
+                    }
+                    for (const f of FACULTY) {
+                        const words = f.name.toLowerCase().split(' ').filter(w => w.length > 2);
+                        const matchCount = words.filter(w => lowerLine.includes(w)).length;
+                        if (matchCount >= Math.ceil(words.length * 0.7) || lowerLine.includes(f.name.toLowerCase())) {
+                            slot.facultyId = f.id;
+                            break;
+                        }
+                    }
+                }
+
+                if (timeMatch || slot.courseId || slot.facultyId || (slot.room !== "301" && slot.room !== "") || isBreakLine || lowerLine.length > 15) {
+                    extractedSlots.push(slot);
+                }
+            });
+
+            if (extractedSlots.length === 0) {
+                throw new Error("Text was extracted but no schedule patterns (times, subjects, or rooms) were recognized.");
+            }
+
+            // Sort
+            extractedSlots.sort((a, b) => {
+                const dayDiff = dayIndices[a.day] - dayIndices[b.day];
+                if (dayDiff !== 0) return dayDiff;
+                return a.start.localeCompare(b.start);
+            });
+
+            const tbody = document.getElementById('ocrReviewBody');
+            tbody.innerHTML = '';
+
+            extractedSlots.forEach((slot) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="ps-3"><small class="text-truncate d-block" style="max-width: 150px;" title="${slot.original}">${slot.original}</small></td>
+                    <td>
+                        <select class="form-select form-select-sm course-select" ${slot.isBreak ? 'disabled' : ''}>
+                            <option value="">${slot.isBreak ? '---' : 'Select Course'}</option>
+                            ${COURSES.map(c => `<option value="${c.id}" ${slot.courseId == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm faculty-select" ${slot.isBreak ? 'disabled' : ''}>
+                            <option value="">${slot.isBreak ? '---' : 'Select Faculty'}</option>
+                            ${FACULTY.map(f => `<option value="${f.id}" ${slot.facultyId == f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <input type="text" class="form-control form-control-sm dept-input" placeholder="Dept" value="${(COURSES.find(c => c.id == slot.courseId) || {}).dept || ''}" style="width: 60px;">
+                            <select class="form-select form-select-sm sem-select" style="width: 60px;">
+                                <option value="">Sem</option>
+                                ${[1, 2, 3, 4, 5, 6, 7, 8].map(i => `<option value="${i}" ${slot.isBreak ? '' : (COURSES.find(c => c.id == slot.courseId) || {}).sem == i ? 'selected' : ''}>${i}</option>`).join('')}
+                            </select>
+                        </div>
+                    </td>
+                    <td>
+                        <select class="form-select form-select-sm day-select">
+                            ${Object.keys(dayIndices).map(d => `<option value="${d}" ${slot.day == d ? 'selected' : ''}>${d}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <input type="time" class="form-control form-control-sm start-time" value="${slot.start}">
+                            <input type="time" class="form-control form-control-sm end-time" value="${slot.end}">
+                        </div>
+                    </td>
+                    <td><input type="text" class="form-control form-control-sm classroom-input" placeholder="Room" value="${slot.room}"></td>
+                    <td class="text-center"><button class="btn btn-sm btn-link text-danger p-0" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('processingStep').classList.add('d-none');
+            document.getElementById('reviewStep').classList.remove('d-none');
+        } catch (err) {
+            console.error("AI Scan Error:", err);
+            if (worker) await worker.terminate();
+
+            let userMsg = err.message;
+            if (userMsg.includes("NetworkError") || userMsg.includes("fetch")) {
+                userMsg = "Network timeout or connection error while loading AI engine. Please check your internet and try again.";
+            }
+            alert("Scan failed: \n" + userMsg);
+            resetAIImport();
+        }
+    }
+
+    function resetAIImport() {
+        document.getElementById('uploadStep').classList.remove('d-none');
+        document.getElementById('processingStep').classList.add('d-none');
+        document.getElementById('reviewStep').classList.add('d-none');
+        document.getElementById('timetableImage').value = '';
+    }
+
+    async function saveBulkTimetable(btn) {
+        const rows = document.getElementById('ocrReviewBody').querySelectorAll('tr');
+        const data = Array.from(rows).map(row => {
+            const courseSelect = row.querySelector('.course-select');
+            const facultySelect = row.querySelector('.faculty-select');
+
+            const isBreak = courseSelect.disabled;
+            const courseId = courseSelect.value || null;
+            const facultyId = facultySelect.value || null;
+
+            if (!isBreak && (!courseId || !facultyId)) return null;
+
+            return {
+                course_id: courseId,
+                faculty_id: facultyId,
+                day: row.querySelector('.day-select').value,
+                start_time: row.querySelector('.start-time').value,
+                end_time: row.querySelector('.end-time').value,
+                classroom: row.querySelector('.classroom-input').value,
+                department: row.querySelector('.dept-input').value,
+                semester: row.querySelector('.sem-select').value
+            };
+        }).filter(d => d !== null);
+
+        if (data.length === 0) {
+            alert("Please select a Course and Faculty for at least one row before saving.");
+            return;
+        }
+
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving to Database...';
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for DB operation
+
+            const response = await fetch('/admin/bulk-add-timetable', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slots: data }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            const result = await response.json();
+            if (result.success) {
+                window.location.reload();
+            } else {
+                alert("Server error: " + result.error);
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        } catch (err) {
+            console.error(err);
+            let msg = "Failed to save. ";
+            if (err.name === 'AbortError') msg += "The server took too long to respond (Timeout).";
+            else msg += err.message;
+            alert(msg);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    }
+
+    // Drag and Drop Logic
+    function initializeDragAndDrop() {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('timetableImage');
+
+        if (dropZone && fileInput) {
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('bg-info', 'bg-opacity-10');
+                    dropZone.style.borderColor = '#0dcaf0';
+                    dropZone.style.transform = 'scale(1.01)';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('bg-info', 'bg-opacity-10');
+                    dropZone.style.borderColor = '#0dcaf0';
+                    dropZone.style.transform = 'scale(1)';
+                }, false);
+            });
+
+            dropZone.addEventListener('drop', e => {
+                const dt = e.dataTransfer;
+                const file = dt.files[0];
+                if (file) {
+                    processImage(file);
+                }
+            }, false);
+
+            // Trigger file input on click
+            dropZone.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'I') {
+                    fileInput.click();
+                }
+            });
+        }
+    }
+
+    // Start everything
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeDragAndDrop);
+    } else {
+        initializeDragAndDrop();
+    }
+</script>
+{% endblock %}

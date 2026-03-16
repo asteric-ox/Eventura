@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-cogs me-2"></i>System Settings</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary load-page">
+            <i class="fas fa-arrow-left me-1"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">General Configuration</h5>
+    </div>
+    <div class="card-body">
+
+        <form method="POST" action="{{ url_for('admin.system_settings') }}">
+            <div class="mb-3 form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="maintenanceMode" name="maintenance_mode" {% if
+                    maintenance_active %}checked{% endif %}>
+                <label class="form-check-label" for="maintenanceMode">Enable Maintenance Mode</label>
+                <small class="form-text text-muted d-block">If enabled, students and faculty cannot access the
+                    dashboard.</small>
+            </div>
+
+            <div class="mb-3 form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="registrationOpen" checked disabled>
+                <label class="form-check-label" for="registrationOpen">Allow New Student Registrations</label>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">System Email (for notifications)</label>
+                <input type="email" class="form-control" value="admin@college.edu" disabled>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </form>
+
+    </div>
+</div>
+
+<div class="card shadow-sm border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">Danger Zone</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-danger">These actions are irreversible. Please proceed with caution.</p>
+
+        <button class="btn btn-outline-danger w-100 mb-2">
+            <i class="fas fa-trash-alt me-2"></i> Delete All Student Data
+        </button>
+
+        <button class="btn btn-outline-danger w-100">
+            <i class="fas fa-database me-2"></i> Reset Database
+        </button>
+    </div>
+</div>
+
+{% endblock %}

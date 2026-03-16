@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}On-Duty Approvals{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2><i class="fas fa-clipboard-check me-2"></i>On-Duty Requests</h2>
+        <p class="text-muted">Approve OD for students in your department who attended events.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm glass-ui">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Reg. No</th>
+                        <th>Event</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td>{{ req.student_name }}</td>
+                        <td>{{ req.register_number }}</td>
+                        <td>{{ req.event_name }}</td>
+                        <td>{{ req.event_date }}</td>
+                        <td>
+                            {% if req.status == 'Pending' %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif req.status == 'Approved' %}
+                            <span class="badge bg-success">Approved</span>
+                            {% else %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.status == 'Pending' %}
+                            <a href="{{ url_for('admin.approve_onduty', req_id=req.request_id, action='approve') }}"
+                                class="btn btn-sm btn-success" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            <a href="{{ url_for('admin.approve_onduty', req_id=req.request_id, action='reject') }}"
+                                class="btn btn-sm btn-danger" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">Processed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No pending On-Duty requests found for your department.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

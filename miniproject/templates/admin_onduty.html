@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Admin: On-Duty Management{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2 class="text-primary"><i class="fas fa-user-check me-2"></i>Manage On-Duty Requests</h2>
+        <p class="text-muted">Review, assign a period and approve On-Duty requests for all departments.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm glass-ui">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student Details</th>
+                        <th>Event Details</th>
+                        <th>Participation Check</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in requests %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">{{ req.student_name }}</div>
+                            <small class="text-muted">{{ req.register_number }}</small><br>
+                            <span class="badge bg-secondary">{{ req.department }}</span>
+                            &nbsp;
+                            {% if req.register_number and req.register_number.upper().startswith('NIE23CS') %}
+                            <span class="badge fw-bold"
+                                style="background:linear-gradient(135deg,#4361ee,#7209b7); border-radius:20px; font-size:.65rem;">
+                                <i class="fas fa-star me-1"></i>Student
+                            </span>
+                            {% else %}
+                            <span class="badge fw-bold"
+                                style="background:linear-gradient(135deg,#4cc9f0,#0077b6); color:#000; border-radius:20px; font-size:.65rem;">
+                                <i class="fas fa-globe me-1"></i>Inter_Student
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ req.event_name }}</div>
+                            <small>{{ req.event_date }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-info text-dark">
+                                <i class="fas fa-check-circle me-1"></i> Verified Present
+                            </span>
+                        </td>
+                        <td>
+                            {% if req.status == 'Pending' %}
+                            <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif req.status == 'Approved' %}
+                            <span class="badge bg-success">Approved</span>
+                            {% if req.timetable_id %}
+                            <br><small class="text-success"><i class="fas fa-lock me-1"></i>OD Period Set</small>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if req.status == 'Pending' %}
+                            <!-- Approve → opens modal to pick period -->
+                            <button class="btn btn-sm btn-success approve-od-btn" data-req-id="{{ req.request_id }}"
+                                data-student="{{ req.student_name }}" data-event="{{ req.event_name }}"
+                                data-dept="{{ req.department }}" data-event-date="{{ req.event_date }}">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                            <a href="{{ url_for('admin.approve_onduty', req_id=req.request_id, action='reject') }}"
+                                class="btn btn-sm btn-danger" title="Reject">
+                                <i class="fas fa-times"></i> Reject
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">Processed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">No pending On-Duty requests found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Approve OD Modal -->
+<div class="modal fade" id="approveOdModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-ui border-0 shadow-lg">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold text-white">
+                    <i class="fas fa-user-check me-2 text-success"></i>Approve On-Duty Request
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="" id="approveOdForm">
+                <div class="modal-body">
+                    <div class="mb-3 p-3 rounded-3" style="background:rgba(255,255,255,0.05);">
+                        <p class="text-white mb-1 fw-bold" id="modalStudentName"></p>
+                        <p class="text-white-50 small mb-0" id="modalEventName"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white fw-bold">
+                            <i class="far fa-calendar-alt me-1 text-warning"></i>On-Duty Date
+                        </label>
+                        <input type="date" name="od_date" id="odDateInput"
+                            class="form-control glass-input text-white border-0" required>
+                        <small class="text-white-50">Date on which the student was on duty (event date).</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-white fw-bold">
+                            <i class="fas fa-chalkboard me-1 text-info"></i>Period for that Day
+                        </label>
+                        <select name="timetable_id" id="odTimetableSelect"
+                            class="form-select glass-input text-white border-0" required>
+                            <option value="">— Pick a date first —</option>
+                        </select>
+                        <div id="odNoSlots" class="mt-2 d-none">
+                            <span class="badge bg-danger px-3 py-2 rounded-3">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                No classes scheduled on that day.
+                            </span>
+                        </div>
+                        <small class="text-white-50 mt-1 d-block">
+                            Only periods for the selected day are shown.
+                            The student will be marked <strong class="text-success">Present</strong>
+                            and faculty <strong class="text-warning">cannot override</strong> this.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4">
+                        <i class="fas fa-check me-1"></i>Approve & Auto-Mark Present
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="allSlotsData">
+    [{% for slot in timetable_slots %}{"id":{{ slot.timetable_id }},"day":"{{ slot.day }}","start":"{{ slot.start_time }}","end":"{{ slot.end_time }}","course":"{{ slot.course_name | e }}","dept":"{{ slot.department }}","sem":"{{ slot.semester }}"}{% if not loop.last %},{% endif %}{% endfor %}]
+</script>
+
+<script>
+    // Embed all timetable slots as JSON from server
+    const ALL_SLOTS = JSON.parse(document.getElementById('allSlotsData').textContent);
+
+    const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+    function filterSlotsByDate(dateStr) {
+        const select = document.getElementById('odTimetableSelect');
+        const noSlots = document.getElementById('odNoSlots');
+        const submitBtn = document.querySelector('#approveOdForm button[type=submit]');
+        select.innerHTML = '';
+
+        if (!dateStr) {
+            select.innerHTML = '<option value="">— Pick a date first —</option>';
+            noSlots.classList.add('d-none');
+            submitBtn.disabled = false;
+            return;
+        }
+
+        const dayName = DAY_NAMES[new Date(dateStr + 'T00:00:00').getDay()];
+        const daySlots = ALL_SLOTS.filter(s => s.day === dayName);
+
+        if (daySlots.length === 0) {
+            select.innerHTML = '<option value="">— No classes on ' + dayName + ' —</option>';
+            noSlots.classList.remove('d-none');
+            submitBtn.disabled = true;
+        } else {
+            noSlots.classList.add('d-none');
+            submitBtn.disabled = false;
+            daySlots.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.start + ' – ' + s.end + ' | ' + s.course + ' (' + s.dept + ' Sem ' + s.sem + ')';
+                select.appendChild(opt);
+            });
+        }
+    }
+
+    // When admin clicks Approve, open modal and immediately filter by event date
+    document.querySelectorAll('.approve-od-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const reqId = this.getAttribute('data-req-id');
+            const student = this.getAttribute('data-student');
+            const event = this.getAttribute('data-event');
+            const eventDate = this.getAttribute('data-event-date');
+
+            document.getElementById('modalStudentName').textContent = student;
+            document.getElementById('modalEventName').textContent = 'Event: ' + event;
+            document.getElementById('odDateInput').value = eventDate;
+            document.getElementById('approveOdForm').action = `/admin/onduty/respond/${reqId}/approve`;
+
+            // Auto-filter periods to this event's day
+            filterSlotsByDate(eventDate);
+
+            new bootstrap.Modal(document.getElementById('approveOdModal')).show();
+        });
+    });
+
+    // If admin manually changes the date, re-filter
+    document.getElementById('odDateInput').addEventListener('change', function () {
+        filterSlotsByDate(this.value);
+    });
+</script>
+{% endblock %}

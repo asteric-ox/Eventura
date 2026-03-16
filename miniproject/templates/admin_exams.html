@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Exams{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <h2 class="text-primary"><i class="fas fa-edit me-2"></i>Exam Schedule Management</h2>
+        <p class="text-muted">Schedule academic exams and assign halls.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Add Exam Form -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm glass-ui">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Schedule New Exam</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('admin.admin_exams') }}" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Course / Subject</label>
+                        <select name="course_id" class="form-select" required>
+                            <option value="" selected disabled>Select Course</option>
+                            {% for c in courses %}
+                            <option value="{{ c.course_id }}">{{ c.course_name }} ({{ c.department }} - Sem {{
+                                c.semester }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Exam Date</label>
+                        <input type="date" name="exam_date" class="form-control" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Time</label>
+                            <input type="time" name="start_time" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">End Time</label>
+                            <input type="time" name="end_time" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Exam Hall</label>
+                        <input type="text" name="hall" class="form-control" placeholder="e.g. Main Hall, Room 304"
+                            required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Schedule Exam</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scheduled Exams List -->
+    <div class="col-md-8">
+        <div class="card shadow-sm glass-ui">
+            <div class="card-header bg-transparent border-0">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Scheduled Exams</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Subject</th>
+                                <th>Hall</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for exam in exams %}
+                            <tr>
+                                <td>{{ exam.exam_date }}</td>
+                                <td>{{ exam.start_time }} - {{ exam.end_time }}</td>
+                                <td>
+                                    <span class="fw-bold">{{ exam.course_name }}</span><br>
+                                    <small class="text-muted">{{ exam.department }} (Sem {{ exam.semester }})</small>
+                                </td>
+                                <td><span class="badge bg-secondary">{{ exam.hall }}</span></td>
+                                <td>
+                                    <a href="{{ url_for('admin.delete_exam', exam_id=exam.exam_id) }}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Delete this exam schedule?');">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">No exams scheduled yet.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

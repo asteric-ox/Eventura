@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+{% block title %}Face Recognition System{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="text-primary"><i class="fas fa-user-circle me-2"></i>Face Recognition System</h2>
+        <p class="text-muted">Use your camera to enroll your face or run live recognition.</p>
+    </div>
+</div>
+
+{% if not fr_available or not cv2_available %}
+<div class="alert alert-warning d-flex align-items-start gap-3 shadow-sm">
+    <i class="fas fa-exclamation-triangle fa-2x mt-1 text-warning"></i>
+    <div>
+        <strong>Missing Libraries</strong> — Face recognition requires extra packages.<br>
+        Please stop the server, open a terminal and run:<br>
+        <code class="d-block mt-2 p-2 bg-dark text-warning rounded">
+            pip install opencv-python-headless numpy face-recognition
+        </code>
+        <small class="text-muted mt-1 d-block">
+            <i class="fas fa-info-circle me-1"></i>
+            <strong>Windows users:</strong> face-recognition needs CMake + Visual C++ Build Tools.
+            Install <a href="https://visualstudio.microsoft.com/visual-cpp-build-tools/" target="_blank">Build Tools</a>
+            and <a href="https://cmake.org/download/" target="_blank">CMake</a>, then
+            <code>pip install cmake dlib face-recognition</code>
+        </small>
+    </div>
+</div>
+{% endif %}
+
+<!-- Mode Toggle -->
+<div class="d-flex gap-3 mb-4">
+    <button class="btn btn-primary fw-bold px-4" id="btnEnroll" onclick="setMode('enroll')">
+        <i class="fas fa-user-plus me-2"></i>Enroll My Face
+    </button>
+    <button class="btn btn-outline-info fw-bold px-4" id="btnRecognize" onclick="setMode('recognize')">
+        <i class="fas fa-search me-2"></i>Recognize Face
+    </button>
+</div>
+
+<div class="row g-4">
+    <!-- Camera Column -->
+    <div class="col-md-7">
+        <div class="card glass-ui shadow-sm border-0 overflow-hidden" style="border-radius: 16px;">
+            <div
+                class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between py-3 px-4">
+                <h5 class="mb-0 fw-bold" id="modeLabel">
+                    <i class="fas fa-camera me-2 text-primary"></i>Enroll My Face
+                </h5>
+                <span class="badge bg-danger" id="liveBadge" style="display:none;">
+                    <i class="fas fa-circle me-1" style="font-size:0.6rem;"></i>LIVE
+                </span>
+            </div>
+            <div class="card-body p-0 position-relative" style="background:#111; min-height:300px;">
+
+                <!-- Camera OFF placeholder -->
+                <div id="cameraPlaceholder" style="
+                    width:100%; height:320px;
+                    display:flex; flex-direction:column;
+                    align-items:center; justify-content:center;
+                    color:#aaa; gap:12px;">
+                    <i class="fas fa-video-slash fa-3x" style="opacity:.5;"></i>
+                    <p class="mb-0" style="font-size:.95rem;">Camera is off</p>
+                    <button class="btn btn-primary btn-sm px-4" onclick="startCamera()" id="openCamBtn">
+                        <i class="fas fa-camera me-2"></i>Open Camera
+                    </button>
+                </div>
+
+                <video id="video" autoplay playsinline
+                    style="width:100%; max-height:420px; object-fit:cover; display:none;"></video>
+
+                <!-- Face guide overlay -->
+                <div id="faceGuide" style="
+                    display:none;
+                    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                    width:180px; height:230px;
+                    border: 3px solid rgba(108,200,255,0.7);
+                    border-radius: 50%;
+                    box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
+                    pointer-events:none;
+                "></div>
+                <canvas id="overlay" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
+            </div>
+            <div class="card-footer bg-transparent border-0 p-3 text-center">
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <button class="btn btn-success btn-lg fw-bold px-5 shadow" id="captureBtn" onclick="capture()"
+                        disabled>
+                        <i class="fas fa-camera me-2"></i><span id="captureBtnLabel">Enroll Face</span>
+                    </button>
+                    <button class="btn btn-outline-danger btn-lg fw-bold px-4" id="stopCamBtn" onclick="stopCamera()"
+                        style="display:none;">
+                        <i class="fas fa-stop-circle me-2"></i>Stop Camera
+                    </button>
+                </div>
+                <div class="mt-2 text-muted small" id="cameraStatus">
+                    <i class="fas fa-circle-dot me-1"></i>Click "Open Camera" to start
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Column -->
+    <div class="col-md-5">
+        <!-- Result Panel -->
+        <div class="card glass-ui shadow-sm border-0 mb-3" style="border-radius:16px; min-height:200px;">
+            <div class="card-header bg-transparent border-0 py-3 px-4">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-clipboard-check me-2 text-info"></i>Result</h6>
+            </div>
+            <div class="card-body text-center py-4" id="resultPanel">
+                <i class="fas fa-user-circle fa-4x text-muted opacity-25 mb-3"></i>
+                <p class="text-muted">Capture a frame to see the result here.</p>
+            </div>
+        </div>
+
+        <!-- Live Portrait -->
+        <div class="card glass-ui shadow-sm border-0" style="border-radius:16px;" id="portraitCard"
+            style="display:none;">
+            <div class="card-header bg-transparent border-0 py-2 px-4">
+                <h6 class="mb-0 fw-bold"><i class="fas fa-id-badge me-2 text-warning"></i>Saved Portrait</h6>
+            </div>
+            <div class="card-body text-center p-3" id="portraitBody"></div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card border-0 bg-light mt-3" style="border-radius:16px;">
+            <div class="card-body p-3">
+                <h6 class="fw-bold text-dark"><i class="fas fa-lightbulb me-2 text-warning"></i>Tips</h6>
+                <ul class="mb-0 small text-muted">
+                    <li>Click <strong>Open Camera</strong> to activate your webcam</li>
+                    <li>Look directly at the camera</li>
+                    <li>Ensure good lighting on your face</li>
+                    <li>Remove sunglasses / masks</li>
+                    <li>Keep your face inside the oval guide</li>
+                    <li>Enroll first, then use Recognize</li>
+                    <li><strong>Recognize</strong> only confirms <em>your own</em> face</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if session.get('is_admin') %}
+<div class="mt-4 text-end">
+    <a href="{{ url_for('face.admin_face_data') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-database me-1"></i>View All Face Records
+    </a>
+</div>
+{% endif %}
+
+<script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const cameraStatus = document.getElementById('cameraStatus');
+    const captureBtn = document.getElementById('captureBtn');
+    const stopCamBtn = document.getElementById('stopCamBtn');
+    const openCamBtn = document.getElementById('openCamBtn');
+    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+    const faceGuide = document.getElementById('faceGuide');
+    const liveBadge = document.getElementById('liveBadge');
+
+    let currentMode = 'enroll';
+    let stream = null;
+
+    // ── Open Camera ──────────────────────────────────────────────────────────
+    async function startCamera() {
+        cameraStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting camera...';
+        openCamBtn.disabled = true;
+        openCamBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting...';
+
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+            });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                overlay.width = video.videoWidth;
+                overlay.height = video.videoHeight;
+
+                // Show live feed, hide placeholder
+                cameraPlaceholder.style.display = 'none';
+                video.style.display = 'block';
+                faceGuide.style.display = 'block';
+                liveBadge.style.display = 'inline-block';
+
+                // Enable capture, show stop button
+                captureBtn.disabled = false;
+                stopCamBtn.style.display = 'inline-block';
+                openCamBtn.style.display = 'none';
+
+                cameraStatus.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Camera ready — position your face in the oval';
+            };
+        } catch (e) {
+            openCamBtn.disabled = false;
+            openCamBtn.innerHTML = '<i class="fas fa-camera me-2"></i>Open Camera';
+            let msg = 'Camera access denied.';
+            if (e.name === 'NotFoundError') msg = 'No camera found on this device.';
+            else if (e.name === 'NotAllowedError') msg = 'Camera permission denied — please allow access in browser settings.';
+            else if (e.name === 'NotReadableError') msg = 'Camera is already in use by another application.';
+            cameraStatus.innerHTML = `<i class="fas fa-times-circle text-danger me-1"></i>${msg}`;
+        }
+    }
+
+    // ── Stop Camera ───────────────────────────────────────────────────────────
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            stream = null;
+        }
+        video.srcObject = null;
+        video.style.display = 'none';
+        faceGuide.style.display = 'none';
+        liveBadge.style.display = 'none';
+        cameraPlaceholder.style.display = 'flex';
+        captureBtn.disabled = true;
+        stopCamBtn.style.display = 'none';
+        openCamBtn.style.display = 'inline-block';
+        openCamBtn.disabled = false;
+        openCamBtn.innerHTML = '<i class="fas fa-camera me-2"></i>Open Camera';
+        cameraStatus.innerHTML = '<i class="fas fa-circle-dot me-1"></i>Camera stopped';
+        resetResult();
+    }
+
+    // ── Mode Toggle ───────────────────────────────────────────────────────────
+    function setMode(mode) {
+        currentMode = mode;
+        const enroll = document.getElementById('btnEnroll');
+        const recog = document.getElementById('btnRecognize');
+        const label = document.getElementById('modeLabel');
+        const btnLbl = document.getElementById('captureBtnLabel');
+
+        if (mode === 'enroll') {
+            enroll.className = 'btn btn-primary fw-bold px-4';
+            recog.className = 'btn btn-outline-info fw-bold px-4';
+            label.innerHTML = '<i class="fas fa-camera me-2 text-primary"></i>Enroll My Face';
+            btnLbl.textContent = 'Enroll Face';
+            captureBtn.className = 'btn btn-success btn-lg fw-bold px-5 shadow';
+        } else {
+            enroll.className = 'btn btn-outline-primary fw-bold px-4';
+            recog.className = 'btn btn-info fw-bold px-4 text-white';
+            label.innerHTML = '<i class="fas fa-search me-2 text-info"></i>Recognize Face';
+            btnLbl.textContent = 'Recognize';
+            captureBtn.className = 'btn btn-info btn-lg fw-bold px-5 shadow text-white';
+        }
+        resetResult();
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function captureFrame() {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        return canvas.toDataURL('image/jpeg', 0.92);
+    }
+
+    function resetResult() {
+        document.getElementById('resultPanel').innerHTML = `
+            <i class="fas fa-user-circle fa-4x text-muted opacity-25 mb-3"></i>
+            <p class="text-muted">Capture a frame to see the result here.</p>
+        `;
+    }
+
+    function showLoading() {
+        document.getElementById('resultPanel').innerHTML = `
+            <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+            <p class="text-muted fw-bold">Processing...</p>
+        `;
+    }
+
+    function showResult(data) {
+        let html = '';
+        if (data.status === 'enrolled') {
+            html = `<div class="p-3">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5 class="fw-bold text-success">Face Enrolled!</h5>
+                <p class="text-muted">${data.message}</p>
+            </div>`;
+        } else if (data.status === 'recognized') {
+            html = `<div class="p-3">
+                <i class="fas fa-user-check fa-3x text-success mb-3"></i>
+                <h5 class="fw-bold text-success">Identity Confirmed!</h5>
+                <p class="mb-1"><strong>User ID:</strong> ${data.user_id}</p>
+                <p class="mb-1"><strong>Role:</strong> <span class="badge bg-info">${data.role}</span></p>
+                <p><strong>Confidence:</strong>
+                    <span class="badge bg-${data.confidence > 70 ? 'success' : 'warning'}">
+                        ${data.confidence}%
+                    </span>
+                </p>
+            </div>`;
+        } else if (data.status === 'no_face') {
+            html = `<div class="p-3">
+                <i class="fas fa-eye-slash fa-3x text-warning mb-3"></i>
+                <h5 class="fw-bold text-warning">No Face Detected</h5>
+                <p class="text-muted">${data.message}</p>
+            </div>`;
+        } else if (data.status === 'not_enrolled') {
+            html = `<div class="p-3">
+                <i class="fas fa-user-slash fa-3x text-secondary mb-3"></i>
+                <h5 class="fw-bold text-secondary">Not Enrolled</h5>
+                <p class="text-muted">${data.message}</p>
+                <button class="btn btn-sm btn-outline-primary mt-1" onclick="setMode('enroll')">
+                    <i class="fas fa-user-plus me-1"></i>Enroll Now
+                </button>
+            </div>`;
+        } else if (data.status === 'unknown') {
+            html = `<div class="p-3">
+                <i class="fas fa-user-slash fa-3x text-danger mb-3"></i>
+                <h5 class="fw-bold text-danger">Not Recognized</h5>
+                <p class="text-muted">${data.message}</p>
+                <small class="text-muted">Your enrolled face does not match the scanned face.</small>
+            </div>`;
+        } else {
+            html = `<div class="p-3">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <h5 class="text-danger">Error</h5>
+                <p class="text-muted small">${data.message}</p>
+            </div>`;
+        }
+        document.getElementById('resultPanel').innerHTML = html;
+
+        if (data.portrait) {
+            document.getElementById('portraitCard').style.display = '';
+            document.getElementById('portraitBody').innerHTML = `
+                <img src="${data.portrait}?t=${Date.now()}"
+                     class="rounded-circle shadow" style="width:130px;height:130px;object-fit:cover;"
+                     alt="Portrait">
+                <p class="mt-2 mb-0 text-muted small">Auto-cropped portrait saved</p>
+            `;
+        }
+    }
+
+    // ── Capture & Send ────────────────────────────────────────────────────────
+    async function capture() {
+        if (!stream) {
+            alert('Camera is not open. Please click "Open Camera" first.');
+            return;
+        }
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            alert('Camera is still loading. Please wait a moment.');
+            return;
+        }
+
+        showLoading();
+        captureBtn.disabled = true;
+
+        const image = captureFrame();
+        const endpoint = currentMode === 'enroll' ? '/enroll-face' : '/recognize';
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image })
+            });
+            const data = await res.json();
+            showResult(data);
+        } catch (e) {
+            showResult({ status: 'error', message: 'Network error: ' + e.message });
+        } finally {
+            captureBtn.disabled = false;
+        }
+    }
+
+    // Keyboard shortcut: Space to capture (only when camera is open)
+    document.addEventListener('keydown', e => {
+        if (e.code === 'Space' && e.target.tagName !== 'BUTTON' && stream) {
+            e.preventDefault();
+            capture();
+        }
+    });
+</script>
+{% endblock %}

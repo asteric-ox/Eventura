@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Certificates{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h3 class="text-primary"><i class="fas fa-certificate me-2"></i>Pending Certificates</h3>
+            <p class="text-muted">Review and approve certificates for students who have attended events.</p>
+        </div>
+    </div>
+
+    <div class="card glass-panel border-0 p-4">
+        {% if pending_certs %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Event Name</th>
+                        <th>Event Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cert in pending_certs %}
+                    <tr>
+                        <td class="fw-bold">{{ cert.student_name }}</td>
+                        <td>{{ cert.event_name }}</td>
+                        <td>{{ cert.event_date }}</td>
+                        <td><span class="badge bg-warning text-dark">{{ cert.certificate_status }}</span></td>
+                        <td>
+                            <a href="{{ url_for('admin.approve_certificate', reg_id=cert.registration_id) }}"
+                                class="btn btn-success btn-sm">
+                                <i class="fas fa-check me-1"></i>Approve
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="fas fa-check-circle fa-4x text-muted"></i>
+            </div>
+            <h5 class="text-muted">All caught up! No pending certificates.</h5>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mt-3">
+        <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
